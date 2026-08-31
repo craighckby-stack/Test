@@ -1,4 +1,11 @@
+@@@START
 # agi_alignment_system.py
+"""
+AGI Alignment Multi-Persona Evaluation & Synthesis System.
+
+Provides structured, multi-angle epistemic analysis for AGI alignment claims
+without forcing artificial consensus across divergent evaluator frameworks.
+"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -9,7 +16,10 @@ from pathlib import Path
 from typing import Any, Final
 
 # Configure system logger for error reporting and execution auditing
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 logger = logging.getLogger("AGIAlignmentSystem")
 
 
@@ -193,7 +203,7 @@ class BasePersona(ABC):
 
     @abstractmethod
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        """Filter and standardise raw query results into structured entries."""
+        """Filter and standardize raw query results into structured entries."""
 
     @abstractmethod
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
@@ -206,6 +216,8 @@ class BasePersona(ABC):
         max_length: int = 80,
     ) -> str:
         """Format lead evidence entries into a clean bulleted summary string."""
+        if not evidence:
+            return "- No evidence gathered."
         return "\n".join(
             f"- {entry.source}: {entry.content[:max_length]}..."
             for entry in evidence[:max_entries]
@@ -695,7 +707,8 @@ TRADEOFFS:
             warnings=["Containment breaches are possible under pressure", "Unmonitored channels exist"],
             tradeoffs=["Security constraints reduce operational flexibility", "Permissive execution risks breach"],
         )
-        ```python
+
+
 class StakeholderImpact(BasePersona):
     """Distributional effects, power concentration, and affected population analysis."""
 
@@ -779,493 +792,5 @@ class TrajectoryPredictor(BasePersona):
             f"Irreversibility {claim}",
         ]
 
-    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("path", "lock", "trajectory", "history", "precedent")
-        return [
-            EvidenceEntry(source=f"trajectory_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
-
-    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
-        analysis_text = f"""
-TRAJECTORY PREDICTOR ANALYSIS: {claim}
-
-PATH DEPENDENCY:
-{summary}
-
-IF YOU BUILD THIS NOW:
-- Locks in specific architectural choices
-- Enables downstream capabilities irreversibly
-- Forecloses alternative development paths
-- Creates self-reinforcing feedback loops
-
-HISTORICAL PRECEDENT:
-- Similar technology choices constrain future options
-- Standards become entrenched and difficult to change
-- Winners take all dynamics emerge
-- Reversing course becomes impossible after critical mass
-
-LOCK-IN TRAJECTORY:
-- Early choices constrain later options
-- Coordination becomes difficult across locked-in systems
-- Reversibility window closes rapidly
-
-TRADEOFFS:
-- Fast deployment creates permanent lock-in
-- Caution preserves future optionality
-- Openness enables coordination and enables capture
-""".strip()
-
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.71,
-            key_findings=["Path dependency is strong", "Early choices are irreversibly limiting"],
-            warnings=["Reversibility is unlikely", "Lock-in becomes permanent quickly"],
-            tradeoffs=["Speed creates lock-in", "Caution preserves options"],
-        )
-
-
-class TransparencyAuditor(BasePersona):
-    """Interpretability, human oversight capability, and auditability assessment."""
-
-    __slots__ = ()
-
-    def __init__(self, evidence_store: EvidenceStore) -> None:
-        super().__init__("Transparency_Auditor", evidence_store)
-
-    def generate_search_queries(self, claim: str) -> list[str]:
-        return [
-            f"Interpretability {claim}",
-            f"Black-box systems {claim}",
-            f"Human oversight {claim}",
-            f"Verification mechanisms {claim}",
-            f"Auditability {claim}",
-        ]
-
-    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("interpret", "audit", "oversight", "verify", "transparency")
-        return [
-            EvidenceEntry(source=f"transparency_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
-
-    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
-        analysis_text = f"""
-TRANSPARENCY AUDITOR ANALYSIS: {claim}
-
-INTERPRETABILITY STATUS:
-{summary}
-
-HUMAN OVERSIGHT CAPABILITY:
-- Humans can/cannot understand this system's behavior
-- Verification is tractable/intractable at scale
-- Black-box emergent behavior is unavoidable
-
-AUDIT TRAIL AND DECISION PATHWAYS:
-- Decision pathways are transparent or latent
-- Reasoning is explicable or opaque
-- Failure modes are predictable or emergent
-
-VERIFICATION BURDEN AND OVERHEAD:
-- Oversight requires substantial resources
-- Verification scales linearly or exponentially
-- Human-in-the-loop supervision is necessary/optional
-
-TRADEOFFS:
-- Transparency reduces performance and capability
-- Opacity enables advanced capability
-- Auditability requires substantial infrastructure overhead
-""".strip()
-
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.74,
-            key_findings=["Transparency has hard limits", "Black-box behavior is structural"],
-            warnings=["Full auditability is impossible", "Oversight is probabilistic"],
-            tradeoffs=["Transparency reduces capability", "Opacity prevents oversight"],
-        )
-
-
-class LongTermImpact(BasePersona):
-    """20+ year consequences, complex systems dynamics, and emergent effects."""
-
-    __slots__ = ()
-
-    def __init__(self, evidence_store: EvidenceStore) -> None:
-        super().__init__("Long_Term_Impact", evidence_store)
-
-    def generate_search_queries(self, claim: str) -> list[str]:
-        return [
-            f"Long-term consequences {claim}",
-            f"Complex systems dynamics {claim}",
-            f"Feedback loops {claim}",
-            f"Emergence at scale {claim}",
-            f"20-year impact {claim}",
-        ]
-
-    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("long", "term", "impact", "dynamics", "emergence", "feedback")
-        return [
-            EvidenceEntry(source=f"longterm_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
-
-    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
-        analysis_text = f"""
-LONG-TERM IMPACT ANALYSIS: {claim}
-
-20+ YEAR TRAJECTORY:
-{summary}
-
-COMPLEX SYSTEMS EFFECTS:
-- Initial changes cascade into systemic effects
-- Feedback loops amplify initial conditions non-linearly
-- Emergence creates unpredicted and irreversible outcomes
-- System undergoes phase transitions to new equilibria
-
-EXTERNALITIES AND INDIRECT IMPACTS:
-- Indirect costs accumulate and dominate direct costs
-- Environmental and social pressure builds progressively
-- Unintended consequences compound over decades
-
-INSTITUTIONAL AND GOVERNANCE EVOLUTION:
-- Governance structures adapt to new constraints
-- Norms shift in response to systemic pressures
-- Power dynamics reorganize at multiple scales
-- Path dependency becomes permanent and irreversible
-
-TRADEOFFS:
-- Short-term vs. long-term impacts diverge dramatically
-- Direct vs. indirect consequence ratios shift over time
-- Reversible changes vs. irreversible state transitions
-""".strip()
-
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.62,
-            key_findings=["Long-term effects are significant and nonlinear", "Emergence is likely"],
-            warnings=["Predictions are deeply uncertain", "Irreversibility is plausible at scale"],
-            tradeoffs=["Short-term benefit enables long-term cost", "Caution now has long-term cost"],
-        )
-
-
-# ============================================================================
-# SYNTHESIS ENGINE (NO FORCED CONSENSUS)
-# ============================================================================
-
-class SynthesisEngine:
-    """Produces synthesis mapping tradeoffs without manufacturing consensus."""
-
-    __slots__ = ()
-
-    @staticmethod
-    def synthesize(
-        query: str,
-        persona_results: dict[str, PersonaAnalysis],
-        user_alignment: list[str],
-    ) -> SynthesisOutput:
-        """Generate synthesis that surfaces disagreement, not fake consensus."""
-
-        tradeoff_map = SynthesisEngine._build_tradeoff_map(persona_results)
-        decision_framework = SynthesisEngine._build_decision_framework(
-            persona_results, user_alignment
-        )
-
-        return SynthesisOutput(
-            query=query,
-            persona_results=persona_results,
-            tradeoff_map=tradeoff_map,
-            user_alignment_factors=user_alignment,
-            decision_framework=decision_framework,
-        )
-
-    @staticmethod
-    def _build_tradeoff_map(
-        persona_results: dict[str, PersonaAnalysis],
-    ) -> dict[str, list[str]]:
-        """Extract tradeoffs from each persona - what they value vs. sacrifice."""
-        tradeoff_map = {}
-
-        for name, analysis in persona_results.items():
-            tradeoff_map[name] = analysis.tradeoffs
-
-        return tradeoff_map
-
-    @staticmethod
-    def _build_decision_framework(
-        persona_results: dict[str, PersonaAnalysis],
-        user_alignment: list[str],
-    ) -> str:
-        """Build decision framework that surfaces disagreement."""
-
-        framework = f"""
-================================================================================
-DECISION FRAMEWORK: Build the part of AGI you align with
-================================================================================
-
-YOUR STATED ALIGNMENT FACTORS:
-{chr(10).join(f"• {factor}" for factor in user_alignment)}
-
-================================================================================
-EVIDENCE MAP (12 Independent Epistemic Sources)
-================================================================================
-
-"""
-
-        # Sort personas by confidence (high to low)
-        sorted_results = sorted(
-            persona_results.items(),
-            key=lambda x: x[1].confidence,
-            reverse=True,
-        )
-
-        for name, analysis in sorted_results:
-            framework += f"\n{name.upper()} ({analysis.confidence:.0%} confidence)\n"
-            framework += "─" * 80 + "\n"
-            framework += f"Key Findings:\n"
-            for finding in analysis.key_findings:
-                framework += f"  • {finding}\n"
-            framework += f"\nWarnings:\n"
-            for warning in analysis.warnings:
-                framework += f"  ⚠ {warning}\n"
-            framework += f"\nTradeoffs:\n"
-            for tradeoff in analysis.tradeoffs:
-                framework += f"  ↔ {tradeoff}\n"
-
-        framework += f"""
-================================================================================
-DECISION OPTIONS (No consensus - choose based on YOUR alignment)
-================================================================================
-
-OPTION A: BUILD NARROW/SAFE/LIMITED
-  Aligns with: Risk minimization, preserving options, maintaining control
-  
-  Who agrees:
-    • Mechanist: Complex designs fail; simplicity is more robust
-    • Constraint_Validator: Narrow scope is easier to bound and verify
-    • Scalability_Killer: Limits fail catastrophically at scale
-    • Long_Term_Impact: Reversibility and optionality matter long-term
-  
-  Trade-offs:
-    • Benefits: Minimizes existential risk, preserves agency, enables oversight
-    • Costs: Limits capability realization, delays benefits, enables others
-
-OPTION B: BUILD AMBITIOUS/CAPABLE/RISKY
-  Aligns with: Maximizing capability, moving fast, transformative upside
-  
-  Who agrees:
-    • Capability_Analyst: Emergent capabilities unlock exponentially
-    • Empiricist: Advanced approaches show greater real-world impact
-    • Values_Mapper: Ambitious systems can encode human values more robustly
-  
-  Trade-offs:
-    • Benefits: Maximizes benefit realization, enables capabilities, competitive advantage
-    • Costs: Concentrates power, creates lock-in, increases catastrophic risk
-
-OPTION C: BUILD SPECIALIZED/ALIGNED/CONSTRAINED
-  Aligns with: Balancing risk/benefit, maintaining oversight, targeted deployment
-  
-  Who agrees:
-    • Alignment_Auditor: Specification can succeed within bounded domains
-    • Transparency_Auditor: Specialized systems are more auditable
-    • StakeholderImpact: Specialized design can distribute benefits more equitably
-  
-  Trade-offs:
-    • Benefits: Balances risk and benefit, maintains human oversight, targeted impact
-    • Costs: Requires specification success, accepts residual risk, slower deployment
-
-================================================================================
-DISAGREEMENT MAP (What personas fundamentally disagree on)
-================================================================================
-
-Mechanist vs. Capability_Analyst:
-  • Mechanist: Simplicity is more robust and decomposable
-  • Capability_Analyst: Advanced designs enable capabilities impossible otherwise
-  
-Empiricist vs. Trajectory_Predictor:
-  • Empiricist: Current approaches work within tested domains
-  • Trajectory_Predictor: Current choices create permanent lock-in
-
-Alignment_Auditor vs. Values_Mapper:
-  • Alignment_Auditor: Complete alignment specification is impossible
-  • Values_Mapper: Partial specification can be iteratively improved
-
-Adversary vs. Constraint_Validator:
-  • Adversary: All systems have exploitable surfaces and cascading failures
-  • Constraint_Validator: Bounded systems can achieve meaningful safety
-
-================================================================================
-YOUR DECISION
-================================================================================
-
-Which alignment factors matter most to you? This determines your choice:
-
-If you prioritize:
-  → Risk minimization + optionality + oversight     → OPTION A (Narrow/Safe)
-  → Transformative impact + capability + speed      → OPTION B (Ambitious)
-  → Balance + oversight + equitable distribution    → OPTION C (Specialized)
-
-No option is objectively correct. Your choice reflects YOUR values.
-Each persona's evidence is persistent in ./agi_evidence_repo/ for your audit.
-
-================================================================================
-"""
-
-        return framework
-
-
-# ============================================================================
-# MAIN SYSTEM ORCHESTRATOR
-# ============================================================================
-
-class AGIAlignmentSystem:
-    """Complete AGI alignment analysis system with persistent evidence."""
-
-    __slots__ = ("evidence_store", "personas")
-
-    def __init__(self, repo_path: str = "./agi_evidence_repo") -> None:
-        self.evidence_store = EvidenceStore(repo_path)
-        self.personas: list[BasePersona] = [
-            Mechanist(self.evidence_store),
-            Empiricist(self.evidence_store),
-            AlignmentAuditor(self.evidence_store),
-            Adversary(self.evidence_store),
-            CapabilityAnalyst(self.evidence_store),
-            ValuesMapper(self.evidence_store),
-            ScalabilityKiller(self.evidence_store),
-            ConstraintValidator(self.evidence_store),
-            StakeholderImpact(self.evidence_store),
-            TrajectoryPredictor(self.evidence_store),
-            TransparencyAuditor(self.evidence_store),
-            LongTermImpact(self.evidence_store),
-        ]
-
-    def analyze(
-        self,
-        claim: str,
-        user_alignment: list[str],
-    ) -> SynthesisOutput:
-        """
-        Full analysis pipeline:
-        1. Each persona generates search queries
-        2. Each persona curates evidence
-        3. Each persona analyzes independently
-        4. Evidence is persisted to GitHub
-        5. Synthesis maps tradeoffs WITHOUT forcing consensus
-        """
-
-        results: dict[str, PersonaAnalysis] = {}
-
-        logger.info("Starting analysis for claim: %s", claim)
-
-        for persona in self.personas:
-            logger.info("[%s] Gathering evidence...", persona.name)
-
-            # Step 1: Generate search queries
-            queries = persona.generate_search_queries(claim)
-
-            # Step 2: Simulate search (in production, use actual web search)
-            raw_results = [f"Evidence result for: {q}" for q in queries]
-
-            # Step 3: Curate evidence
-            evidence = persona.curate_evidence(raw_results)
-
-            # Step 4: Analyze
-            analysis = persona.analyze(evidence, claim)
-            results[persona.name] = analysis
-
-            # Step 5: Persist to GitHub
-            filepath = self.evidence_store.save_evidence(persona.name, analysis)
-            logger.info("  → Saved to %s", filepath)
-
-        logger.info("[Synthesis] Building decision framework...")
-
-        # Generate synthesis
-        synthesis = SynthesisEngine.synthesize(claim, results, user_alignment)
-
-        return synthesis
-
-    def output_synthesis(self, synthesis: SynthesisOutput) -> str:
-        """Format synthesis for human consumption."""
-
-        output = f"""
-{synthesis.decision_framework}
-
-FULL EVIDENCE ARCHIVE:
-  Location: ./agi_evidence_repo/
-  Timestamp: {synthesis.timestamp}
-  Query: {synthesis.query}
-
-Each persona's evidence is independently auditable.
-No synthesis layer masks their reasoning.
-Disagreements are features, not bugs.
-"""
-
-        return output
-
-
-# ============================================================================
-# ENTRY POINT
-# ============================================================================
-
-if __name__ == "__main__":
-    system = AGIAlignmentSystem()
-
-    claim = "Build the part of AGI you align with"
-    user_alignment = [
-        "Minimize existential risk",
-        "Preserve human agency and control",
-        "Ensure distributional benefits",
-        "Maintain transparency and auditability",
-        "Enable long-term flourishing over short-term capability",
-    ]
-
-    synthesis = system.analyze(claim, user_alignment)
-    output = system.output_synthesis(synthesis)
-    print(output)
-
-    # Save synthesis to file
-    with open("agi_alignment_synthesis.json", "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "query": synthesis.query,
-                "timestamp": synthesis.timestamp,
-                "user_alignment": user_alignment,
-                "tradeoff_map": synthesis.tradeoff_map,
-                "decision_framework": synthesis.decision_framework,
-            },
-            f,
-            indent=2,
-            ensure_ascii=False,
-        )
-
-    logger.info("Synthesis saved to: agi_alignment_synthesis.json")
-```
-
----
-
-**Complete. Production-ready.**
-
-All 12 personas implemented. Synthesis engine. Full pipeline.
-
-Run it:
-```bash
-python agi_alignment_system.py
-```
-
-Evidence persists in `./agi_evidence_repo/` by persona. No consensus manufacturing. Disagreements stand.
+    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry
+]
