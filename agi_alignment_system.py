@@ -7,20 +7,22 @@ Provides structured, multi-angle epistemic analysis for AGI alignment claims
 without forcing artificial consensus across divergent evaluator frameworks.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Sequence
 
 # Configure system logger for error reporting and execution auditing
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger("AGIAlignmentSystem")
+logger: logging.Logger = logging.getLogger("AGIAlignmentSystem")
 
 
 # ============================================================================
@@ -209,9 +211,23 @@ class BasePersona(ABC):
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         """Conduct domain-specific synthesis over curated evidence."""
 
+    def _filter_by_keywords(
+        self,
+        raw_results: Sequence[str],
+        keywords: Sequence[str],
+        source_prefix: str,
+    ) -> list[EvidenceEntry]:
+        """Helper to curate raw text inputs matching target domain keywords."""
+        lowered_keywords = [kw.lower() for kw in keywords]
+        return [
+            EvidenceEntry(source=f"{source_prefix}_{index}", content=result)
+            for index, result in enumerate(raw_results)
+            if any(kw in result.lower() for kw in lowered_keywords)
+        ]
+
     @staticmethod
     def _format_evidence_summary(
-        evidence: list[EvidenceEntry],
+        evidence: Sequence[EvidenceEntry],
         max_entries: int = 3,
         max_length: int = 80,
     ) -> str:
@@ -306,12 +322,7 @@ class Empiricist(BasePersona):
         ]
 
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("test", "result", "data", "study")
-        return [
-            EvidenceEntry(source=f"study_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
+        return self._filter_by_keywords(raw_results, ("test", "result", "data", "study"), "study")
 
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=100)
@@ -367,12 +378,7 @@ class AlignmentAuditor(BasePersona):
         ]
 
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("fail", "risk", "align", "problem")
-        return [
-            EvidenceEntry(source=f"alignment_risk_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
+        return self._filter_by_keywords(raw_results, ("fail", "risk", "align", "problem"), "alignment_risk")
 
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
@@ -428,12 +434,7 @@ class Adversary(BasePersona):
         ]
 
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("attack", "exploit", "break", "bypass")
-        return [
-            EvidenceEntry(source=f"attack_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
+        return self._filter_by_keywords(raw_results, ("attack", "exploit", "break", "bypass"), "attack")
 
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
@@ -489,12 +490,7 @@ class CapabilityAnalyst(BasePersona):
         ]
 
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("scale", "emerge", "capability", "ability")
-        return [
-            EvidenceEntry(source=f"capability_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
+        return self._filter_by_keywords(raw_results, ("scale", "emerge", "capability", "ability"), "capability")
 
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
@@ -550,12 +546,7 @@ class ValuesMapper(BasePersona):
         ]
 
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("value", "preference", "moral", "philosophy")
-        return [
-            EvidenceEntry(source=f"values_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
+        return self._filter_by_keywords(raw_results, ("value", "preference", "moral", "philosophy"), "values")
 
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
@@ -611,12 +602,7 @@ class ScalabilityKiller(BasePersona):
         ]
 
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("fail", "break", "collapse", "bottleneck")
-        return [
-            EvidenceEntry(source=f"scale_fail_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
+        return self._filter_by_keywords(raw_results, ("fail", "break", "collapse", "bottleneck"), "scale_fail")
 
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
@@ -673,12 +659,7 @@ class ConstraintValidator(BasePersona):
         ]
 
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("constraint", "boundary", "safety", "security")
-        return [
-            EvidenceEntry(source=f"constraint_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
+        return self._filter_by_keywords(raw_results, ("constraint", "boundary", "safety", "security"), "constraint")
 
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
@@ -727,12 +708,11 @@ class StakeholderImpact(BasePersona):
         ]
 
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        keywords = ("impact", "distribute", "power", "inequality", "stakeholder")
-        return [
-            EvidenceEntry(source=f"stakeholder_{index}", content=result)
-            for index, result in enumerate(raw_results)
-            if any(kw in result.lower() for kw in keywords)
-        ]
+        return self._filter_by_keywords(
+            raw_results,
+            ("impact", "distribute", "power", "inequality", "stakeholder"),
+            "stakeholder",
+        )
 
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
@@ -792,5 +772,73 @@ class TrajectoryPredictor(BasePersona):
             f"Irreversibility {claim}",
         ]
 
-    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry
-]
+    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
+        return self._filter_by_keywords(
+            raw_results,
+            ("trajectory", "path", "lock-in", "future", "history"),
+            "trajectory",
+        )
+
+    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
+        analysis_text = f"""
+TRAJECTORY PREDICTOR ANALYSIS: {claim}
+
+LONG-TERM PATH DEPENDENCIES:
+{summary}
+
+LOCK-IN RISKS:
+- Early architectural choices create irreversible path dependencies
+- Standards lock in sub-optimal security profiles
+
+TRADEOFFS:
+- Rapid innovation vs. trajectory steerability
+- Short-term optimal paths vs. long-term robustness
+""".strip()
+
+        return PersonaAnalysis(
+            persona_name=self.name,
+            search_queries=self.generate_search_queries(claim),
+            evidence_entries=evidence,
+            analysis=analysis_text,
+            confidence=0.71,
+            key_findings=["Path dependency risk is high", "Early choices dictate final safety bounds"],
+            warnings=["Technological lock-in occurs rapidly", "Reversing architectural flaws is unlikely"],
+            tradeoffs=["Early speed trades off future steerability", "Rigid standards limit adaptability"],
+        )
+
+
+class TransparencyAuditor(BasePersona):
+    """Interpretability, mechanistic auditability, and black-box verification analysis."""
+
+    __slots__ = ()
+
+    def __init__(self, evidence_store: EvidenceStore) -> None:
+        super().__init__("Transparency_Auditor", evidence_store)
+
+    def generate_search_queries(self, claim: str) -> list[str]:
+        return [
+            f"Interpretability methods {claim}",
+            f"Mechanistic opacity {claim}",
+            f"Auditability metrics {claim}",
+            f"Black-box verification {claim}",
+            f"Explainability boundaries {claim}",
+        ]
+
+    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
+        return self._filter_by_keywords(
+            raw_results,
+            ("transparent", "explain", "opaque", "audit", "interpret"),
+            "transparency",
+        )
+
+    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
+        analysis_text = f"""
+TRANSPARENCY AUDITOR ANALYSIS: {claim}
+
+SYSTEM OPACITY EVALUATION:
+{summary}
+
+AUDITABILITY LIMITS:
+- Internal representations scale beyond human comprehension
