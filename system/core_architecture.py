@@ -1,6 +1,6 @@
 # system/core_architecture.py
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 import re
 from typing import Any, Dict, List, Optional, Tuple, Final, TypedDict, Union, cast
@@ -92,7 +92,7 @@ class InputParser:
         
         Optimized via pre-compiled string tokens for memory efficiency and zero-copy speed.
         """
-        if not raw_input:
+        if not raw_input or not isinstance(raw_input, str):
             return ConstraintSet(), ""
 
         query = raw_input
@@ -167,6 +167,9 @@ class ExecutionRouter:
         """
         CRITICAL: Determine strict execution mode without blind routing to Standard mode.
         """
+        if not isinstance(query, str):
+            query = str(query)
+
         if constraints.direct_mechanical_only and constraints.no_roleplay:
             # Check if system CAN answer this way using the validator
             if bool(CanExecuteConstrainedMode(query)):
@@ -200,6 +203,9 @@ class DirectResponseExecutor:
 
     def execute(self, query: str, constraints: ConstraintSet) -> DirectResponseDict:
         """Direct mechanical response - no theatrical layers."""
+        if not isinstance(query, str):
+            query = str(query)
+
         response: DirectResponseDict = {
             "mode": ExecutionMode.CONSTRAINED.value,
             "constraints_honored": True,
@@ -308,6 +314,9 @@ class StandardExecutor:
 
     def execute(self, query: str) -> StandardResponseDict:
         """Execute persona pipeline (maintained for backward compatibility)."""
+        if not isinstance(query, str):
+            query = str(query)
+            
         return {
             "mode": ExecutionMode.STANDARD.value,
             "query": query,
@@ -365,6 +374,9 @@ class ConstrainedCognitiveArchitecture:
 
     def _diagnostic_mode(self, query: str, constraints: ConstraintSet) -> DiagnosticResponseDict:
         """Identify structural and epistemic contradictions in the query or system."""
+        if not isinstance(query, str):
+            query = str(query)
+
         contradictions: List[str] = []
         q_lower = query.lower()
 
