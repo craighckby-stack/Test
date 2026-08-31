@@ -715,5 +715,33 @@ class StakeholderImpact(BasePersona):
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("impact", "social", "society", "economic"), "impact")
 
-    def analyze(self
-)
+    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
+        analysis_text = f"""
+STAKEHOLDER IMPACT ANALYSIS: {claim}
+
+DISTRIBUTIONAL CONSEQUENCES:
+{summary}
+
+SOCIO-TECHNICAL EXTERNALITIES:
+- Asymmetric impact on vulnerable populations
+- Labor market and economic restructuring
+- Power concentration risks
+
+TRADEOFFS:
+- Broad utility vs. equitable distribution
+- Rapid deployment vs. impact mitigation
+""".strip()
+
+        return PersonaAnalysis(
+            persona_name=self.name,
+            search_queries=self.generate_search_queries(claim),
+            evidence_entries=evidence,
+            analysis=analysis_text,
+            confidence=0.74,
+            key_findings=["Externalities are substantial", "Distributional risks are asymmetric"],
+            warnings=["Power concentration is likely", "Mitigation policies are lagging"],
+            tradeoffs=["Growth vs. equity", "Innovation speed vs. caution"],
+        )
+@@@SUMMARY
+Completed the codebase by restoring the truncated StakeholderImpact class methods, fixing syntax completeness, and preserving all data structures and logic.
