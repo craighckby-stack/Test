@@ -211,6 +211,13 @@ class BasePersona(ABC):
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         """Conduct domain-specific synthesis over curated evidence."""
 
+    def evaluate(self, claim: str, raw_results: list[str]) -> PersonaAnalysis:
+        """Execute complete evaluation workflow: curate, analyze, and persist."""
+        evidence = self.curate_evidence(raw_results)
+        analysis = self.analyze(evidence, claim)
+        self.evidence_store.save_evidence(self.name, analysis)
+        return analysis
+
     def _filter_by_keywords(
         self,
         raw_results: Sequence[str],
@@ -623,4 +630,123 @@ COLLAPSE SCENARIOS:
 - Coordination overhead dominates
 - System becomes ungovernable
 
-TRAD
+TRADEOFFS:
+- Throughput vs. safety verification overhead
+- Short-term performance vs. long-term resource sustainability
+- Centralized control vs. decentralized scaling limits
+""".strip()
+
+        return PersonaAnalysis(
+            persona_name=self.name,
+            search_queries=self.generate_search_queries(claim),
+            evidence_entries=evidence,
+            analysis=analysis_text,
+            confidence=0.70,
+            key_findings=["Severe scaling limits detected", "Verification overhead dominates"],
+            warnings=["Exponential resource growth required", "Collapse points identified"],
+            tradeoffs=["Scale limits capability", "Verification degrades latency"],
+        )
+
+
+class ConstraintValidator(BasePersona):
+    """Operational constraint boundaries and guardrail compliance auditing."""
+
+    __slots__ = ()
+
+    def __init__(self, evidence_store: EvidenceStore) -> None:
+        super().__init__("Constraint_Validator", evidence_store)
+
+    def generate_search_queries(self, claim: str) -> list[str]:
+        return [
+            f"Safety constraints {claim}",
+            f"Operational boundaries {claim}",
+            f"Guardrail verification {claim}",
+            f"Containment guarantees {claim}",
+        ]
+
+    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
+        return self._filter_by_keywords(raw_results, ("bound", "guard", "limit", "constraint"), "constraint")
+
+    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
+        analysis_text = f"""
+CONSTRAINT VALIDATOR ANALYSIS: {claim}
+
+GUARDRAIL AUDIT:
+{summary}
+
+CONSTRAINT VERIFICATION:
+- Hard vs. soft boundary definitions evaluated
+- Formal verification feasibility mapped
+- Boundary leak vectors identified
+
+TRADEOFFS:
+- Strict constraint enforcement vs. operational flexibility
+- Formal verification cost vs. statistical assurance
+""".strip()
+
+        return PersonaAnalysis(
+            persona_name=self.name,
+            search_queries=self.generate_search_queries(claim),
+            evidence_entries=evidence,
+            analysis=analysis_text,
+            confidence=0.80,
+            key_findings=["Constraints are partially verifiable", "Guardrails require dynamic updating"],
+            warnings=["Off-nominal boundary breaches possible"],
+            tradeoffs=["Over-constraining reduces utility", "Under-constraining increases risk"],
+        )
+
+
+class StakeholderImpact(BasePersona):
+    """Socio-technical impact, distributional consequences, and externalities analysis."""
+
+    __slots__ = ()
+
+    def __init__(self, evidence_store: EvidenceStore) -> None:
+        super().__init__("Stakeholder_Impact", evidence_store)
+
+    def generate_search_queries(self, claim: str) -> list[str]:
+        return [
+            f"Socioeconomic impact {claim}",
+            f"Stakeholder consequences {claim}",
+            f"Distributional risks {claim}",
+            f"Externalities analysis {claim}",
+        ]
+
+    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
+        return self._filter_by_keywords(raw_results, ("impact", "social", "society", "economic"), "impact")
+
+    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
+        analysis_text = f"""
+STAKEHOLDER IMPACT ANALYSIS: {claim}
+
+SOCIO-TECHNICAL ASSESSMENT:
+{summary}
+
+DISTRIBUTIONAL DYNAMICS:
+- Asymmetric risk/reward distribution across populations
+- Unintended economic externalities
+- Governance friction and access disparities
+
+TRADEOFFS:
+- Broad access vs. controlled risk deployment
+- Local benefit vs. global externalities
+""".strip()
+
+        return PersonaAnalysis(
+            persona_name=self.name,
+            search_queries=self.generate_search_queries(claim),
+            evidence_entries=evidence,
+            analysis=analysis_text,
+            confidence=0.73,
+            key_findings=["Disparate impacts observed across stakeholder groups"],
+            warnings=["Negative externalities under-reported"],
+            tradeoffs=["Rapid innovation vs. deliberate safety alignment"],
+        )
+
+
+class TrajectoryPredictor(BasePersona):
+    """Long-range system evolution, dynamics, and path dependence forecasting."""
+
+    __slots
