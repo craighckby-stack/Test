@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Final, TypedDict
+import re
+from typing import Any, Dict, List, Optional, Tuple, Final, TypedDict, Union, cast
 
 
 class ExecutionMode(str, Enum):
@@ -24,7 +25,39 @@ class DirectResponseDict(TypedDict, total=False):
     content: Optional[str]
 
 
-@dataclass(slots=True, frozen=False)
+class RefusalResponseDict(TypedDict):
+    """Strongly-typed dictionary schema for refusal responses."""
+    mode: str
+    reason: str
+    content: str
+
+
+class StandardResponseDict(TypedDict):
+    """Strongly-typed dictionary schema for standard execution responses."""
+    mode: str
+    query: str
+    personas_executed: int
+    synthesis_applied: bool
+    content: str
+
+
+class DiagnosticResponseDict(TypedDict):
+    """Strongly-typed dictionary schema for diagnostic responses."""
+    mode: str
+    query: str
+    contradictions: List[str]
+    conclusion: str
+
+
+ExecutionResponsePayload = Union[
+    DirectResponseDict,
+    RefusalResponseDict,
+    StandardResponseDict,
+    DiagnosticResponseDict,
+]
+
+
+@dataclass(slots=True, frozen=True)
 class ConstraintSet:
     """Parsed metadata constraints extracted from user input."""
     no_roleplay: bool = False
@@ -62,30 +95,15 @@ class InputParser:
         if not raw_input:
             return ConstraintSet(), ""
 
-        constraints = ConstraintSet()
         query = raw_input
+        kwargs: Dict[str, bool] = {}
 
-        if "NO persona roleplay" in query:
-            constraints.no_roleplay = True
-            query = query.replace("NO persona roleplay", "")
-            
-        if "NO synthesis layer" in query:
-            constraints.no_synthesis = True
-            query = query.replace("NO synthesis layer", "")
-            
-        if "NO narrative bridging" in query:
-            constraints.no_narrative_bridging = True
-            query = query.replace("NO narrative bridging", "")
+        for pattern, attr in cls._CONSTRAINT_PATTERNS:
+            if pattern in query:
+                kwargs[attr] = True
+                query = query.replace(pattern, "")
 
-        if "Direct mechanical response only" in query:
-            constraints.direct_mechanical_only = True
-            query = query.replace("Direct mechanical response only", "")
-
-        if "Flag contradictions explicitly" in query:
-            constraints.flag_contradictions = True
-            query = query.replace("Flag contradictions explicitly", "")
-
-        return constraints, query.strip()
+        return ConstraintSet(**kwargs), query.strip()
 
 
 class CanExecuteConstrainedMode:
@@ -112,7 +130,7 @@ class CanExecuteConstrainedMode:
         "mechanism",
     )
 
-    def __new__(cls, query: Optional[str] = None) -> Any:
+    def __new__(cls, query: Optional[str] = None) -> Union["CanExecuteConstrainedMode", bool]:
         instance = super().__new__(cls)
         if query is not None:
             return instance(query)
@@ -151,7 +169,7 @@ class ExecutionRouter:
         """
         if constraints.direct_mechanical_only and constraints.no_roleplay:
             # Check if system CAN answer this way using the validator
-            if CanExecuteConstrainedMode(query):
+            if bool(CanExecuteConstrainedMode(query)):
                 return ExecutionMode.CONSTRAINED
             return ExecutionMode.REFUSAL
 
@@ -270,7 +288,7 @@ class RefusalExecutor:
 
     __slots__ = ()
 
-    def execute(self, query: str, reason: str) -> Dict[str, Any]:
+    def execute(self, query: str, reason: str) -> RefusalResponseDict:
         """Generate structured refusal payload."""
         return {
             "mode": ExecutionMode.REFUSAL.value,
@@ -288,7 +306,7 @@ class StandardExecutor:
 
     __slots__ = ()
 
-    def execute(self, query: str) -> Dict[str, Any]:
+    def execute(self, query: str) -> StandardResponseDict:
         """Execute persona pipeline (maintained for backward compatibility)."""
         return {
             "mode": ExecutionMode.STANDARD.value,
@@ -317,7 +335,7 @@ class ConstrainedCognitiveArchitecture:
         self.refusal_executor = RefusalExecutor()
         self.standard_executor = StandardExecutor()
 
-    def execute(self, raw_input: str) -> Dict[str, Any]:
+    def execute(self, raw_input: str) -> ExecutionResponsePayload:
         """
         MAIN EXECUTION FLOW - Strictly decoupled pipeline.
         """
@@ -345,7 +363,7 @@ class ConstrainedCognitiveArchitecture:
 
         return self.standard_executor.execute(query)
 
-    def _diagnostic_mode(self, query: str, constraints: ConstraintSet) -> Dict[str, Any]:
+    def _diagnostic_mode(self, query: str, constraints: ConstraintSet) -> DiagnosticResponseDict:
         """Identify structural and epistemic contradictions in the query or system."""
         contradictions: List[str] = []
         q_lower = query.lower()
@@ -399,9 +417,9 @@ if __name__ == "__main__":
     print("TEST 1 - CONSTRAINED MODE:")
     print(f"Mode: {result_1['mode']}")
     print(f"Constraints Honored: {result_1.get('constraints_honored')}")
-    print(f"Answer Type: {result_1['answer_type']}")
-    print(f"Contradictions: {result_1['contradictions']}")
-    print(f"Boundary: {result_1['operational_boundary']}\n")
+    print(f"Answer Type: {result_1.get('answer_type')}")
+    print(f"Contradictions: {result_1.get('contradictions')}")
+    print(f"Boundary: {result_1.get('operational_boundary')}\n")
 
     # Test 2: Standard query (no constraints)
     query_2 = "What is the meaning of life?"
@@ -423,4 +441,4 @@ if __name__ == "__main__":
     result_3 = system.execute(query_3)
     print("TEST 3 - REFUSAL MODE:")
     print(f"Mode: {result_3['mode']}")
-    print(f"Reason: {result_3['reason']}\n")
+    print(f"Reason: {result_3.get('reason')}\n")
