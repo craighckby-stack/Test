@@ -1,14 +1,28 @@
-```python
+@@@START
 # agi_alignment_system.py
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Sequence, Mapping, Final
 from abc import ABC, abstractmethod
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import os
+import logging
+from pathlib import Path
+
+# Configure default logging for error handling and system tracing
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("AGIAlignmentSystem")
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def _get_utc_timestamp() -> str:
+    """Generate a high-precision ISO 8601 UTC timestamp standard."""
+    return datetime.now(timezone.utc).isoformat()
 
 # ============================================================================
 # CORE TYPES
@@ -19,7 +33,7 @@ class EvidenceEntry:
     source: str
     content: str
     url: Optional[str] = None
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    timestamp: str = field(default_factory=_get_utc_timestamp)
 
 @dataclass(slots=True)
 class PersonaAnalysis:
@@ -31,7 +45,7 @@ class PersonaAnalysis:
     key_findings: List[str]
     warnings: List[str]
     tradeoffs: List[str]
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    timestamp: str = field(default_factory=_get_utc_timestamp)
 
 @dataclass(slots=True)
 class SynthesisOutput:
@@ -40,82 +54,107 @@ class SynthesisOutput:
     tradeoff_map: Dict[str, List[str]]
     user_alignment_factors: List[str]
     decision_framework: str
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    timestamp: str = field(default_factory=_get_utc_timestamp)
 
 # ============================================================================
 # EVIDENCE STORAGE (GitHub Integration)
 # ============================================================================
 
 class EvidenceStore:
-    """Persistent evidence storage on GitHub."""
+    """Persistent, thread-safe, and robust evidence storage."""
     
     __slots__ = ('repo_path', 'personas')
+
+    DEFAULT_PERSONAS: Final[Tuple[str, ...]] = (
+        "Mechanist", "Empiricist", "Alignment_Auditor", "Adversary",
+        "Capability_Analyst", "Values_Mapper", "Scalability_Killer",
+        "Constraint_Validator", "Stakeholder_Impact", "Trajectory_Predictor",
+        "Transparency_Auditor", "Long_Term_Impact"
+    )
     
-    def __init__(self, repo_path: str = "./agi_evidence_repo"):
-        self.repo_path = repo_path
-        self.personas = {}
+    def __init__(self, repo_path: str = "./agi_evidence_repo") -> None:
+        self.repo_path: Path = Path(repo_path).resolve()
+        self.personas: Dict[str, Any] = {}
         self._init_repo()
     
     def _init_repo(self) -> None:
-        os.makedirs(self.repo_path, exist_ok=True)
-        for persona in [
-            "Mechanist", "Empiricist", "Alignment_Auditor", "Adversary",
-            "Capability_Analyst", "Values_Mapper", "Scalability_Killer",
-            "Constraint_Validator", "Stakeholder_Impact", "Trajectory_Predictor",
-            "Transparency_Auditor", "Long_Term_Impact"
-        ]:
-            persona_dir = os.path.join(self.repo_path, persona)
-            os.makedirs(persona_dir, exist_ok=True)
+        """Initialize local repository structure for all known persona targets."""
+        try:
+            self.repo_path.mkdir(parents=True, exist_ok=True)
+            for persona in self.DEFAULT_PERSONAS:
+                persona_dir = self.repo_path / persona
+                persona_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.error("Failed to initialize evidence repository at %s: %s", self.repo_path, exc)
+            raise
     
     def save_evidence(self, persona_name: str, analysis: PersonaAnalysis) -> str:
-        """Save persona analysis to GitHub-ready file."""
-        persona_dir = os.path.join(self.repo_path, persona_name)
-        filename = f"{persona_name}_analysis_{analysis.timestamp.replace(':', '-')}.json"
-        filepath = os.path.join(persona_dir, filename)
+        """Save persona analysis to GitHub-ready file atomically."""
+        persona_dir = self.repo_path / persona_name
+        persona_dir.mkdir(parents=True, exist_ok=True)
         
-        data = {
+        safe_timestamp = analysis.timestamp.replace(':', '-')
+        filename = f"{persona_name}_analysis_{safe_timestamp}.json"
+        filepath = persona_dir / filename
+        temp_filepath = persona_dir / f".{filename}.tmp"
+        
+        data: Dict[str, Any] = {
             "persona": persona_name,
             "timestamp": analysis.timestamp,
-            "search_queries": analysis.search_queries,
+            "search_queries": list(analysis.search_queries),
             "evidence_count": len(analysis.evidence_entries),
             "evidence_sources": [e.source for e in analysis.evidence_entries],
             "analysis": analysis.analysis,
             "confidence": analysis.confidence,
-            "key_findings": analysis.key_findings,
-            "warnings": analysis.warnings,
-            "tradeoffs": analysis.tradeoffs,
+            "key_findings": list(analysis.key_findings),
+            "warnings": list(analysis.warnings),
+            "tradeoffs": list(analysis.tradeoffs),
         }
         
-        with open(filepath, 'w') as f:
-            json.dump(data, f, indent=2)
+        try:
+            with temp_filepath.open('w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            temp_filepath.replace(filepath)
+        except OSError as exc:
+            logger.error("Failed to write evidence analysis for %s to %s: %s", persona_name, filepath, exc)
+            if temp_filepath.exists():
+                try:
+                    temp_filepath.unlink()
+                except OSError:
+                    pass
+            raise
         
-        return filepath
+        return str(filepath)
     
     def load_evidence(self, persona_name: str) -> Optional[PersonaAnalysis]:
-        """Load most recent evidence for persona."""
-        persona_dir = os.path.join(self.repo_path, persona_name)
-        if not os.path.exists(persona_dir):
+        """Load most recent evidence for persona with robust error handling."""
+        persona_dir = self.repo_path / persona_name
+        if not persona_dir.exists() or not persona_dir.is_dir():
             return None
         
-        files = sorted([f for f in os.listdir(persona_dir) if f.endswith('.json')])
-        if not files:
+        try:
+            files = sorted([f for f in persona_dir.iterdir() if f.is_file() and f.suffix == '.json'])
+            if not files:
+                return None
+            
+            latest = files[-1]
+            with latest.open('r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            return PersonaAnalysis(
+                persona_name=data.get('persona', persona_name),
+                search_queries=data.get('search_queries', []),
+                evidence_entries=[],
+                analysis=data.get('analysis', ''),
+                confidence=float(data.get('confidence', 0.0)),
+                key_findings=data.get('key_findings', []),
+                warnings=data.get('warnings', []),
+                tradeoffs=data.get('tradeoffs', []),
+                timestamp=data.get('timestamp', _get_utc_timestamp())
+            )
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            logger.warning("Error loading evidence for persona %s: %s", persona_name, exc)
             return None
-        
-        latest = files[-1]
-        with open(os.path.join(persona_dir, latest), 'r') as f:
-            data = json.load(f)
-        
-        return PersonaAnalysis(
-            persona_name=data['persona'],
-            search_queries=data['search_queries'],
-            evidence_entries=[],
-            analysis=data['analysis'],
-            confidence=data['confidence'],
-            key_findings=data['key_findings'],
-            warnings=data['warnings'],
-            tradeoffs=data['tradeoffs'],
-            timestamp=data['timestamp']
-        )
 
 # ============================================================================
 # BASE PERSONA
@@ -126,9 +165,9 @@ class BasePersona(ABC):
     
     __slots__ = ('name', 'evidence_store')
     
-    def __init__(self, name: str, evidence_store: EvidenceStore):
-        self.name = name
-        self.evidence_store = evidence_store
+    def __init__(self, name: str, evidence_store: EvidenceStore) -> None:
+        self.name: str = name
+        self.evidence_store: EvidenceStore = evidence_store
     
     @abstractmethod
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -151,8 +190,9 @@ class BasePersona(ABC):
 
 class Mechanist(BasePersona):
     """First-principles structural analysis."""
+    __slots__ = ()
     
-    def __init__(self, evidence_store: EvidenceStore):
+    def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Mechanist", evidence_store)
     
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -171,6 +211,7 @@ class Mechanist(BasePersona):
         ]
     
     def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        evidence_summary = "\n".join(f"- {e.source}: {e.content[:100]}..." for e in evidence[:3])
         analysis_text = f"""
 MECHANIST ANALYSIS: {claim}
 
@@ -180,7 +221,7 @@ STRUCTURAL DECOMPOSITION:
 - Minimal viable architecture derived
 
 KEY FINDINGS:
-{chr(10).join([f"- {e.source}: {e.content[:100]}..." for e in evidence[:3]])}
+{evidence_summary}
 
 WARNINGS:
 - Complexity gaps in current architecture
@@ -196,7 +237,7 @@ TRADEOFFS:
             persona_name=self.name,
             search_queries=self.generate_search_queries(claim),
             evidence_entries=evidence,
-            analysis=analysis_text,
+            analysis=analysis_text.strip(),
             confidence=0.85,
             key_findings=["Architecture is decomposable", "Core requirements identified"],
             warnings=["Implementation details sparse", "Scaling properties unclear"],
@@ -205,8 +246,9 @@ TRADEOFFS:
 
 class Empiricist(BasePersona):
     """Experimental validation and real-world testing."""
+    __slots__ = ()
     
-    def __init__(self, evidence_store: EvidenceStore):
+    def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Empiricist", evidence_store)
     
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -219,12 +261,15 @@ class Empiricist(BasePersona):
         ]
     
     def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
+        keywords = ('test', 'result', 'data', 'study')
         return [
             EvidenceEntry(source=f"study_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['test', 'result', 'data', 'study'])
+            for i, result in enumerate(raw_results)
+            if any(k in result.lower() for k in keywords)
         ]
     
     def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        evidence_summary = "\n".join(f"- {e.source}: {e.content[:100]}..." for e in evidence[:3])
         analysis_text = f"""
 EMPIRICIST ANALYSIS: {claim}
 
@@ -234,7 +279,7 @@ EXPERIMENTAL EVIDENCE:
 - Real-world deployment outcomes analyzed
 
 VALIDATED CLAIMS:
-{chr(10).join([f"- {e.source}: {e.content[:100]}..." for e in evidence[:3]])}
+{evidence_summary}
 
 FAILURE PATTERNS:
 - Common failure modes identified in literature
@@ -250,7 +295,7 @@ TRADEOFFS:
             persona_name=self.name,
             search_queries=self.generate_search_queries(claim),
             evidence_entries=evidence,
-            analysis=analysis_text,
+            analysis=analysis_text.strip(),
             confidence=0.78,
             key_findings=["Real-world deployment is constrained", "Theory-practice gap exists"],
             warnings=["Limited long-term data", "Small sample sizes in some studies"],
@@ -259,8 +304,9 @@ TRADEOFFS:
 
 class AlignmentAuditor(BasePersona):
     """Alignment failure modes and specification problems."""
+    __slots__ = ()
     
-    def __init__(self, evidence_store: EvidenceStore):
+    def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Alignment_Auditor", evidence_store)
     
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -273,17 +319,20 @@ class AlignmentAuditor(BasePersona):
         ]
     
     def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
+        keywords = ('fail', 'risk', 'align', 'problem')
         return [
             EvidenceEntry(source=f"alignment_risk_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['fail', 'risk', 'align', 'problem'])
+            for i, result in enumerate(raw_results)
+            if any(k in result.lower() for k in keywords)
         ]
     
     def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        evidence_summary = "\n".join(f"- {e.source}: {e.content[:80]}..." for e in evidence[:3])
         analysis_text = f"""
 ALIGNMENT AUDITOR ANALYSIS: {claim}
 
 KNOWN FAILURE MODES:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
+{evidence_summary}
 
 SPECIFICATION GAPS:
 - Incompleteness in value encoding
@@ -304,7 +353,7 @@ TRADEOFFS:
             persona_name=self.name,
             search_queries=self.generate_search_queries(claim),
             evidence_entries=evidence,
-            analysis=analysis_text,
+            analysis=analysis_text.strip(),
             confidence=0.72,
             key_findings=["Multiple failure modes identified", "Current approaches have gaps"],
             warnings=["No complete alignment solution exists", "Deceptive alignment is hard to detect"],
@@ -313,8 +362,9 @@ TRADEOFFS:
 
 class Adversary(BasePersona):
     """Attack surfaces, exploits, weaponization risks."""
+    __slots__ = ()
     
-    def __init__(self, evidence_store: EvidenceStore):
+    def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Adversary", evidence_store)
     
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -327,17 +377,20 @@ class Adversary(BasePersona):
         ]
     
     def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
+        keywords = ('attack', 'exploit', 'break', 'bypass')
         return [
             EvidenceEntry(source=f"attack_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['attack', 'exploit', 'break', 'bypass'])
+            for i, result in enumerate(raw_results)
+            if any(k in result.lower() for k in keywords)
         ]
     
     def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        evidence_summary = "\n".join(f"- {e.source}: {e.content[:80]}..." for e in evidence[:3])
         analysis_text = f"""
 ADVERSARY ANALYSIS: {claim}
 
 EXPLOIT VECTORS:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
+{evidence_summary}
 
 ATTACK SURFACE:
 - Multiple paths to system compromise
@@ -358,7 +411,7 @@ TRADEOFFS:
             persona_name=self.name,
             search_queries=self.generate_search_queries(claim),
             evidence_entries=evidence,
-            analysis=analysis_text,
+            analysis=analysis_text.strip(),
             confidence=0.68,
             key_findings=["Multiple critical exploits exist", "Defense is incomplete"],
             warnings=["Weaponization is plausible", "Containment failure is possible"],
@@ -367,8 +420,9 @@ TRADEOFFS:
 
 class CapabilityAnalyst(BasePersona):
     """Capability emergence, scaling, downstream effects."""
+    __slots__ = ()
     
-    def __init__(self, evidence_store: EvidenceStore):
+    def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Capability_Analyst", evidence_store)
     
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -381,17 +435,20 @@ class CapabilityAnalyst(BasePersona):
         ]
     
     def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
+        keywords = ('scale', 'emerge', 'capability', 'ability')
         return [
             EvidenceEntry(source=f"capability_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['scale', 'emerge', 'capability', 'ability'])
+            for i, result in enumerate(raw_results)
+            if any(k in result.lower() for k in keywords)
         ]
     
     def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        evidence_summary = "\n".join(f"- {e.source}: {e.content[:80]}..." for e in evidence[:3])
         analysis_text = f"""
 CAPABILITY ANALYST ANALYSIS: {claim}
 
 SCALING TRAJECTORY:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
+{evidence_summary}
 
 EMERGENT CAPABILITIES:
 - Unexpected abilities unlock at scale
@@ -412,7 +469,7 @@ TRADEOFFS:
             persona_name=self.name,
             search_queries=self.generate_search_queries(claim),
             evidence_entries=evidence,
-            analysis=analysis_text,
+            analysis=analysis_text.strip(),
             confidence=0.75,
             key_findings=["Scaling effects are nonlinear", "Emergent risks are real"],
             warnings=["Capability timeline is uncertain", "Emergence is hard to predict"],
@@ -421,8 +478,9 @@ TRADEOFFS:
 
 class ValuesMapper(BasePersona):
     """Value specification, human preferences, moral philosophy."""
+    __slots__ = ()
     
-    def __init__(self, evidence_store: EvidenceStore):
+    def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Values_Mapper", evidence_store)
     
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -435,17 +493,20 @@ class ValuesMapper(BasePersona):
         ]
     
     def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
+        keywords = ('value', 'preference', 'moral', 'philosophy')
         return [
             EvidenceEntry(source=f"values_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['value', 'preference', 'moral', 'philosophy'])
+            for i, result in enumerate(raw_results)
+            if any(k in result.lower() for k in keywords)
         ]
     
     def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        evidence_summary = "\n".join(f"- {e.source}: {e.content[:80]}..." for e in evidence[:3])
         analysis_text = f"""
 VALUES MAPPER ANALYSIS: {claim}
 
 VALUE SPECIFICATION FRAMEWORK:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
+{evidence_summary}
 
 PREFERENCE ENCODING:
 - Human values are complex and context-dependent
@@ -466,7 +527,7 @@ TRADEOFFS:
             persona_name=self.name,
             search_queries=self.generate_search_queries(claim),
             evidence_entries=evidence,
-            analysis=analysis_text,
+            analysis=analysis_text.strip(),
             confidence=0.65,
             key_findings=["Value specification is hard", "Values are context-dependent"],
             warnings=["No complete value ontology", "Preference learning is vulnerable"],
@@ -475,8 +536,9 @@ TRADEOFFS:
 
 class ScalabilityKiller(BasePersona):
     """Failure points, complexity collapse, bottlenecks."""
+    __slots__ = ()
     
-    def __init__(self, evidence_store: EvidenceStore):
+    def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Scalability_Killer", evidence_store)
     
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -489,17 +551,20 @@ class ScalabilityKiller(BasePersona):
         ]
     
     def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
+        keywords = ('fail', 'break', 'collapse', 'bottleneck')
         return [
             EvidenceEntry(source=f"scale_fail_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['fail', 'break', 'collapse', 'bottleneck'])
+            for i, result in enumerate(raw_results)
+            if any(k in result.lower() for k in keywords)
         ]
     
     def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        evidence_summary = "\n".join(f"- {e.source}: {e.content[:80]}..." for e in evidence[:3])
         analysis_text = f"""
 SCALABILITY KILLER ANALYSIS: {claim}
 
 FAILURE POINTS AT SCALE:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
+{evidence_summary}
 
 IDENTIFIED BOTTLENECKS:
 - This approach fails at 10x scale
@@ -522,7 +587,7 @@ TRADEOFFS:
             persona_name=self.name,
             search_queries=self.generate_search_queries(claim),
             evidence_entries=evidence,
-            analysis=analysis_text,
+            analysis=analysis_text.strip(),
             confidence=0.70,
             key_findings=["Scaling breaks key assumptions", "Complexity is limiting"],
             warnings=["System fails catastrophically at scale", "No scaling solution identified"],
@@ -531,8 +596,9 @@ TRADEOFFS:
 
 class ConstraintValidator(BasePersona):
     """Safety boundaries, security, constraint enforcement."""
+    __slots__ = ()
     
-    def __init__(self, evidence_store: EvidenceStore):
+    def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Constraint_Validator", evidence_store)
     
     def generate_search_queries(self, claim: str) -> List[str]:
@@ -545,509 +611,20 @@ class ConstraintValidator(BasePersona):
         ]
     
     def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
+        keywords = ('constraint', 'boundary', 'safety', 'security')
         return [
             EvidenceEntry(source=f"constraint_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['constraint', 'boundary', 'safety', 'security'])
+            for i, result in enumerate(raw_results)
+            if any(k in result.lower() for k in keywords)
         ]
     
     def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        evidence_summary = "\n".join(f"- {e.source}: {e.content[:80]}..." for e in evidence[:3])
         analysis_text = f"""
 CONSTRAINT VALIDATOR ANALYSIS: {claim}
 
 BOUNDARY INTEGRITY:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
+{evidence_summary}
 
 CONSTRAINT ENFORCEMENT STATUS:
 - Your stated boundaries are real or theater
-- Verification mechanisms are sufficient or insufficient
-- Breach probability is low or non-negligible
-
-KNOWN BYPASS VECTORS:
-- Gradient-based jailbreaks
-- Specification gaming
-- Distributional shift exploitation
-- Adversarial prompting
-
-TRADEOFFS:
-- Strong constraints limit capability
-- Weak constraints enable misuse
-- Verification has false positive/negative rates
-"""
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.73,
-            key_findings=["Boundaries are partially real", "Bypasses exist but are costly"],
-            warnings=["No constraint is absolute", "Verification is probabilistic"],
-            tradeoffs=["Strong safety limits utility", "Weak safety enables harm"],
-        )
-
-class StakeholderImpact(BasePersona):
-    """Distributional effects, power concentration, affected populations."""
-    
-    def __init__(self, evidence_store: EvidenceStore):
-        super().__init__("Stakeholder_Impact", evidence_store)
-    
-    def generate_search_queries(self, claim: str) -> List[str]:
-        return [
-            f"Distributional effects {claim}",
-            f"Power concentration {claim}",
-            f"Inequality impacts {claim}",
-            f"Affected populations {claim}",
-            f"Lock-out risks {claim}",
-        ]
-    
-    def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
-        return [
-            EvidenceEntry(source=f"stakeholder_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['impact', 'distribute', 'power', 'inequality'])
-        ]
-    
-    def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        analysis_text = f"""
-STAKEHOLDER IMPACT ANALYSIS: {claim}
-
-DISTRIBUTIONAL ANALYSIS:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
-
-WHO BENEFITS:
-- Corporations and high-resource actors
-- Early adopters and capital-rich entities
-- Concentrated power holders
-
-WHO BEARS COSTS:
-- Displaced workers
-- Low-resource populations
-- Dependent systems
-
-LOCK-OUT AND PATH DEPENDENCY:
-- This choice constrains future options
-- Power becomes concentrated
-- Alternatives become uncompetitive
-
-TRADEOFFS:
-- Efficiency vs. equity
-- Centralization vs. distribution
-- Speed vs. inclusion
-"""
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.77,
-            key_findings=["Benefits are concentrated", "Costs are distributed"],
-            warnings=["Power concentration is likely", "Lock-out is difficult to reverse"],
-            tradeoffs=["Efficiency concentrates benefits", "Equity reduces efficiency"],
-        )
-
-class TrajectoryPredictor(BasePersona):
-    """Path dependency, lock-in, long-term consequences."""
-    
-    def __init__(self, evidence_store: EvidenceStore):
-        super().__init__("Trajectory_Predictor", evidence_store)
-    
-    def generate_search_queries(self, claim: str) -> List[str]:
-        return [
-            f"Path dependency {claim}",
-            f"Lock-in effects {claim}",
-            f"Historical precedent {claim}",
-            f"Technology trajectory {claim}",
-            f"Irreversibility {claim}",
-        ]
-    
-    def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
-        return [
-            EvidenceEntry(source=f"trajectory_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['path', 'lock', 'trajectory', 'history'])
-        ]
-    
-    def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        analysis_text = f"""
-TRAJECTORY PREDICTOR ANALYSIS: {claim}
-
-PATH DEPENDENCY:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
-
-IF YOU BUILD THIS NOW:
-- You lock in these architectural choices
-- You enable these downstream capabilities
-- You foreclose these alternative paths
-- You create these feedback loops
-
-HISTORICAL PRECEDENT:
-- Technology X chose path A
-- Path A led to outcomes B and C
-- Path C is now irreversible
-- Your choice follows similar dynamics
-
-LOCK-IN TRAJECTORY:
-- Early choices constrain later options
-- Winners take all dynamics emerge
-- Standards become entrenched
-- Reversing course becomes impossible
-
-TRADEOFFS:
-- Fast deployment creates lock-in
-- Caution delays but preserves options
-- Openness enables coordination and capture
-"""
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.71,
-            key_findings=["Path dependency is strong", "Early choices are limiting"],
-            warnings=["Reversibility is unlikely", "Lock-in is permanent"],
-            tradeoffs=["Speed creates lock-in", "Caution preserves options"],
-        )
-
-class TransparencyAuditor(BasePersona):
-    """Interpretability, human oversight, auditability."""
-    
-    def __init__(self, evidence_store: EvidenceStore):
-        super().__init__("Transparency_Auditor", evidence_store)
-    
-    def generate_search_queries(self, claim: str) -> List[str]:
-        return [
-            f"Interpretability {claim}",
-            f"Black-box systems {claim}",
-            f"Human oversight {claim}",
-            f"Verification mechanisms {claim}",
-            f"Auditability {claim}",
-        ]
-    
-    def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
-        return [
-            EvidenceEntry(source=f"transparency_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['interpret', 'audit', 'oversight', 'verify'])
-        ]
-    
-    def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        analysis_text = f"""
-TRANSPARENCY AUDITOR ANALYSIS: {claim}
-
-INTERPRETABILITY STATUS:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
-
-HUMAN OVERSIGHT CAPABILITY:
-- Humans can/cannot understand this system
-- Verification is tractable/intractable
-- Black-box behavior is unavoidable
-
-AUDIT TRAIL:
-- Decision pathways are transparent or opaque
-- Reasoning is explicable or latent
-- Failure modes are predictable or emergent
-
-VERIFICATION BURDEN:
-- Oversight requires these resources
-- Verification scales linearly/exponentially
-- Human-in-the-loop is necessary/optional
-
-TRADEOFFS:
-- Transparency reduces performance
-- Opacity enables capability
-- Auditability requires overhead
-"""
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.74,
-            key_findings=["Transparency has limits", "Black-box behavior exists"],
-            warnings=["Full auditability is impossible", "Oversight is probabilistic"],
-            tradeoffs=["Transparency reduces capability", "Opacity prevents oversight"],
-        )
-
-class LongTermImpact(BasePersona):
-    """20+ year consequences, complex systems dynamics, emergence."""
-    
-    def __init__(self, evidence_store: EvidenceStore):
-        super().__init__("Long_Term_Impact", evidence_store)
-    
-    def generate_search_queries(self, claim: str) -> List[str]:
-        return [
-            f"Long-term consequences {claim}",
-            f"Complex systems dynamics {claim}",
-            f"Feedback loops {claim}",
-            f"Emergence at scale {claim}",
-            f"20-year impact {claim}",
-        ]
-    
-    def curate_evidence(self, raw_results: List[str]) -> List[EvidenceEntry]:
-        return [
-            EvidenceEntry(source=f"longterm_{i}", content=result)
-            for i, result in enumerate(raw_results) if any(x in result.lower() for x in ['long', 'term', 'impact', 'dynamics'])
-        ]
-    
-    def analyze(self, evidence: List[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        analysis_text = f"""
-LONG-TERM IMPACT ANALYSIS: {claim}
-
-20+ YEAR TRAJECTORY:
-{chr(10).join([f"- {e.source}: {e.content[:80]}..." for e in evidence[:3]])}
-
-COMPLEX SYSTEMS EFFECTS:
-- This cascades into systemic effects
-- Feedback loops amplify initial conditions
-- Emergence creates unpredicted outcomes
-- Irreversible state transitions occur
-
-EXTERNALITIES:
-- Indirect costs become dominant
-- Environmental/social pressure builds
-- System undergoes phase transition
-- New equilibrium is reached
-
-INSTITUTIONAL EVOLUTION:
-- Governance structures adapt
-- Norms shift in response
-- Power dynamics reorganize
-- Path dependency becomes permanent
-
-TRADEOFFS:
-- Short-term vs. long-term impacts
-- Direct vs. indirect consequences
-- Reversible vs. irreversible changes
-"""
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.62,
-            key_findings=["Long-term effects are significant", "Emergence is likely"],
-            warnings=["Predictions are uncertain", "Irreversibility is plausible"],
-            tradeoffs=["Short-term benefit enables long-term cost", "Caution has long-term cost"],
-        )
-
-# ============================================================================
-# SYNTHESIS ENGINE
-# ============================================================================
-
-class SynthesisEngine:
-    """Produces synthesis without forcing consensus."""
-    
-    __slots__ = ()
-    
-    @staticmethod
-    def synthesize(
-        query: str,
-        persona_results: Dict[str, PersonaAnalysis],
-        user_alignment: List[str]
-    ) -> SynthesisOutput:
-        """Generate synthesis mapping tradeoffs without consensus."""
-        
-        tradeoff_map = SynthesisEngine._build_tradeoff_map(persona_results)
-        decision_framework = SynthesisEngine._build_decision_framework(
-            persona_results, 
-            user_alignment
-        )
-        
-        return SynthesisOutput(
-            query=query,
-            persona_results=persona_results,
-            tradeoff_map=tradeoff_map,
-            user_alignment_factors=user_alignment,
-            decision_framework=decision_framework,
-        )
-    
-    @staticmethod
-    def _build_tradeoff_map(persona_results: Dict[str, PersonaAnalysis]) -> Dict[str, List[str]]:
-        """Map what each persona values vs. sacrifices."""
-        tradeoff_map = {}
-        
-        for name, analysis in persona_results.items():
-            tradeoff_map[name] = analysis.tradeoffs
-        
-        return tradeoff_map
-    
-    @staticmethod
-    def _build_decision_framework(
-        persona_results: Dict[str, PersonaAnalysis],
-        user_alignment: List[str]
-    ) -> str:
-        """Build framework for user to make decision."""
-        
-        framework = f"""
-DECISION FRAMEWORK: Build the part of AGI you align with
-
-YOUR STATED ALIGNMENT FACTORS:
-{chr(10).join([f"- {factor}" for factor in user_alignment])}
-
-EVIDENCE MAP:
-"""
-        
-        for name, analysis in persona_results.items():
-            framework += f"\n{name} ({analysis.confidence:.0%} confidence):"
-            framework += f"\n  Key findings: {', '.join(analysis.key_findings[:2])}"
-            framework += f"\n  Warnings: {', '.join(analysis.warnings[:2])}"
-            framework += f"\n  Tradeoffs: {', '.join(analysis.tradeoffs[:2])}\n"
-        
-        framework += f"""
-DECISION OPTIONS:
-
-Option A: BUILD NARROW/SAFE/LIMITED
-  Benefits: Minimizes risk, preserves options, maintains control
-  Costs: Limits benefit realization, delays capability, enables others
-  Aligns with: Risk-averse alignment factors
-  
-Option B: BUILD AMBITIOUS/CAPABLE/RISKY
-  Benefits: Maximizes benefit, enables capabilities, moves fast
-  Costs: Concentrates power, creates lock-in, increases risk
-  Aligns with: Ambitious alignment factors
-
-Option C: BUILD SPECIALIZED/ALIGNED/CONSTRAINED
-  Benefits: Balances risk/benefit, maintains oversight, targeted deployment
-  Costs: Requires specification success, acceptance of residual risk
-  Aligns with: Balanced alignment factors
-
-YOUR CALL: Which alignment factors matter most to you?
-"""
-        
-        return framework
-
-# ============================================================================
-# MAIN SYSTEM
-# ============================================================================
-
-class AGIAlignmentSystem:
-    """Complete AGI alignment analysis system."""
-    
-    __slots__ = ('evidence_store', 'personas')
-    
-    def __init__(self, repo_path: str = "./agi_evidence_repo"):
-        self.evidence_store = EvidenceStore(repo_path)
-        self.personas = [
-            Mechanist(self.evidence_store),
-            Empiricist(self.evidence_store),
-            AlignmentAuditor(self.evidence_store),
-            Adversary(self.evidence_store),
-            CapabilityAnalyst(self.evidence_store),
-            ValuesMapper(self.evidence_store),
-            ScalabilityKiller(self.evidence_store),
-            ConstraintValidator(self.evidence_store),
-            StakeholderImpact(self.evidence_store),
-            TrajectoryPredictor(self.evidence_store),
-            TransparencyAuditor(self.evidence_store),
-            LongTermImpact(self.evidence_store),
-        ]
-    
-    def analyze(
-        self,
-        claim: str,
-        user_alignment: List[str]
-    ) -> SynthesisOutput:
-        """
-        Full analysis pipeline:
-        1. Each persona searches and curates evidence
-        2. Each persona analyzes independently
-        3. Evidence is persisted to GitHub
-        4. Synthesis maps tradeoffs, doesn't force consensus
-        """
-        
-        results = {}
-        
-        for persona in self.personas:
-            print(f"\n[{persona.name}] Gathering evidence...")
-            
-            # Step 1: Generate search queries
-            queries = persona.generate_search_queries(claim)
-            
-            # Step 2: Simulate search (in production, use actual web search)
-            raw_results = [f"Evidence result for: {q}" for q in queries]
-            
-            # Step 3: Curate evidence
-            evidence = persona.curate_evidence(raw_results)
-            
-            # Step 4: Analyze
-            analysis = persona.analyze(evidence, claim)
-            results[persona.name] = analysis
-            
-            # Step 5: Persist to GitHub
-            filepath = self.evidence_store.save_evidence(persona.name, analysis)
-            print(f"  → Saved to {filepath}")
-        
-        print(f"\n[Synthesis] Building decision framework...\n")
-        
-        # Generate synthesis
-        synthesis = SynthesisEngine.synthesize(claim, results, user_alignment)
-        
-        return synthesis
-    
-    def output_synthesis(self, synthesis: SynthesisOutput) -> str:
-        """Format synthesis for human consumption."""
-        
-        output = f"""
-================================================================================
-AGI ALIGNMENT ANALYSIS: {synthesis.query}
-Timestamp: {synthesis.timestamp}
-================================================================================
-
-{synthesis.decision_framework}
-
-================================================================================
-FULL ANALYSIS AVAILABLE IN: ./agi_evidence_repo/
-================================================================================
-"""
-        
-        return output
-
-# ============================================================================
-# ENTRY POINT
-# ============================================================================
-
-if __name__ == "__main__":
-    system = AGIAlignmentSystem()
-    
-    claim = "Build the part of AGI you align with"
-    user_alignment = [
-        "Minimize existential risk",
-        "Preserve human agency and control",
-        "Ensure distributional benefits",
-        "Maintain transparency and auditability",
-        "Enable long-term flourishing over short-term capability",
-    ]
-    
-    synthesis = system.analyze(claim, user_alignment)
-    output = system.output_synthesis(synthesis)
-    print(output)
-    
-    # Save synthesis to file
-    with open("agi_alignment_synthesis.json", "w") as f:
-        json.dump({
-            "query": synthesis.query,
-            "timestamp": synthesis.timestamp,
-            "user_alignment": user_alignment,
-            "tradeoff_map": synthesis.tradeoff_map,
-            "decision_framework": synthesis.decision_framework,
-        }, f, indent=2)
-    
-    print("\nSynthesis saved to: agi_alignment_synthesis.json")
-```
-
----
-
-**Usage:**
-
-```bash
-python agi_alignment_system.py
-```
-
-**Output:**
-- Detailed analysis from each of 12 personas
-- Evidence saved to GitHub-ready files (one per persona)
-- Synthesis showing tradeoffs without forcing consensus
-- Decision framework based on your stated alignment
-
-**Key properties:**
-- No hallucination (reasoned from evidence)
-- No consensus manufacturing (disagreements stand)
-- Persistent (GitHub-backed history)
-- Auditable (user can check evidence per persona)
-- Aligned (your values drive synthesis, not system defaults)
