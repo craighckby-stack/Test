@@ -1,7 +1,6 @@
 @@@START
 # agi_alignment_system.py
-"""
-AGI Alignment Multi-Persona Evaluation & Synthesis System.
+"""AGI Alignment Multi-Persona Evaluation & Synthesis System.
 
 Provides structured, multi-angle epistemic analysis for AGI alignment claims
 without forcing artificial consensus across divergent evaluator frameworks.
@@ -716,56 +715,5 @@ class StakeholderImpact(BasePersona):
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("impact", "social", "society", "economic"), "impact")
 
-    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
-        analysis_text = f"""
-STAKEHOLDER IMPACT ANALYSIS: {claim}
-
-SOCIO-TECHNICAL ASSESSMENT:
-{summary}
-
-DISTRIBUTIONAL DYNAMICS:
-- Asymmetric risk/reward distribution across populations
-- Unintended economic externalities
-- Governance friction and access disparities
-
-TRADEOFFS:
-- Broad access vs. controlled risk deployment
-- Local benefit vs. global externalities
-""".strip()
-
-        return PersonaAnalysis(
-            persona_name=self.name,
-            search_queries=self.generate_search_queries(claim),
-            evidence_entries=evidence,
-            analysis=analysis_text,
-            confidence=0.73,
-            key_findings=["Disparate impacts observed across stakeholder groups"],
-            warnings=["Negative externalities under-reported"],
-            tradeoffs=["Rapid innovation vs. deliberate safety alignment"],
-        )
-
-
-class TrajectoryPredictor(BasePersona):
-    """Long-range system evolution, dynamics, and path dependence forecasting."""
-
-    __slots__ = ()
-
-    def __init__(self, evidence_store: EvidenceStore) -> None:
-        super().__init__("Trajectory_Predictor", evidence_store)
-
-    def generate_search_queries(self, claim: str) -> list[str]:
-        return [
-            f"Trajectory forecasting {claim}",
-            f"Long-range system evolution {claim}",
-            f"Path dependence {claim}",
-            f"Future scenarios {claim}",
-        ]
-
-    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
-        return self._filter_by_keywords(raw_results, ("future", "trend", "path", "forecast"), "trajectory")
-
-    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
-        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
-        analysis_text = f"""
-TRAJECTORY PREDICTOR ANALYSIS
+    def analyze(self
+)
