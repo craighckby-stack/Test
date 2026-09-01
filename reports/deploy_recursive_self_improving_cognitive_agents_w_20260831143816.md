@@ -180,8 +180,7 @@ To deploy under **Option C (Specialized & Aligned)** or **Option A**, the execut
 import hashlib
 import json
 import os
-import sys
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 class RecursiveEvolutionGate:
     """
