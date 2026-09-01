@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary & Problem Statement
 
-Recursive Self-Improvement (RSI) in autonomous cognitive agents represents the inflection point where an agent modifies its internal weights, architecture, meta-prompts, code generation modules, or tool-use pipelines without direct human intervention. 
+Recursive Self-Improvement (RSI) in autonomous cognitive agents represents the inflection point where an agent modifies its internal weights, architecture, meta-prompts, code generation modules, or tool-use pipelines without direct human intervention.
 
 This dossier evaluates the deployment of **Recursive Self-Improving Cognitive Agents (RSI-CAs)** under the Autonomous Cognitive Architecture (ACA) 12-Persona Evaluation Framework. Rather than forcing consensus, this evaluation maps fundamental divergences across 12 independent epistemic lenses, outlines key structural risks (such as instrumental convergence, optimization drift, and capability jump discontinuities), and presents three distinct operational decision pathways.
 
@@ -110,4 +110,4 @@ Each persona executed independent analytical routines against the self-improveme
 
 ---
 
-## 3. Irreconcilable Ep
+## 3. Irreconcil
