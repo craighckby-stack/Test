@@ -1,4 +1,3 @@
-@@@START
 # agi_alignment_system.py
 """AGI Alignment Multi-Persona Evaluation & Synthesis System.
 
