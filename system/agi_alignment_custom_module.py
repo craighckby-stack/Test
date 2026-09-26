@@ -139,6 +139,3 @@ class AGIAlignmentEngine:
             logger.info("Synthesis dossier persisted: %s", dossier.claim_id)
         except (IOError, TypeError, OSError) as e:
             logger.error("Failed to persist synthesis dossier %s: %s", dossier.claim_id, e)
-@@@
-@@@SUMMARY
-Refactored error propagation, validated strict type constraints, and eliminated ungrounded numeric metrics to ensure full AST alignment and compliance.
