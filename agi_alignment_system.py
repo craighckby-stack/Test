@@ -97,7 +97,7 @@ class EvidenceStore:
         "Long_Term_Impact",
     )
 
-    def __init__(self, repo_path: str = "./agi_evidence_repo") -> None:
+    def __init__(self, repo_path: str | Path = "./agi_evidence_repo") -> None:
         self.repo_path: Path = Path(repo_path).resolve()
         self.personas: dict[str, Any] = {}
         self._init_repo()
@@ -147,7 +147,7 @@ class EvidenceStore:
             logger.error("Failed to write evidence analysis for %s to %s: %s", persona_name, filepath, exc)
             if temp_filepath.exists():
                 try:
-                    temp_filepath.unlink()
+                    temp_filepath.unlink(missing_ok=True)
                 except OSError:
                     pass
             raise
@@ -171,6 +171,10 @@ class EvidenceStore:
             latest_file = json_files[-1]
             with latest_file.open("r", encoding="utf-8") as file_handle:
                 data = json.load(file_handle)
+
+            if not isinstance(data, dict):
+                logger.warning("Invalid data format in evidence file: %s", latest_file)
+                return None
 
             return PersonaAnalysis(
                 persona_name=str(data.get("persona", persona_name)),
@@ -773,3 +777,4 @@ TRADEOFFS:
             warnings=("Power concentration is likely", "Mitigation policies are lagging"),
             tradeoffs=("Growth vs. equity", "Innovation speed vs. caution"),
         )
+@@@
