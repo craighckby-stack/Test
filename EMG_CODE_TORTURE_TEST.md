@@ -7,7 +7,7 @@ Optimization Goal: **COMPREHENSIVE**
 
 ## Overview
 
-This document contains test vectors, utility functions, and architectural patterns optimized for correctness, type safety, and security. All components adhere strictly to defensive programming standards without ungrounded quantitative claims or non-technical adjectives.
+This document contains test vectors, utility functions, and architectural patterns designed for correctness, type safety, and security. All components adhere strictly to defensive programming standards without ungrounded quantitative claims or non-technical descriptors.
 
 ---
 
@@ -41,7 +41,7 @@ export function add(a: number, b: number): number {
 
 ### A02 — Type Safety Validation
 ```typescript
-/** A02 — Type safety failure fix */
+/** A02 — Type safety validation */
 export function userCount(users: string[]): number {
   return users.length > 0 ? users.length : 0;
 }
@@ -49,7 +49,7 @@ export function userCount(users: string[]): number {
 
 ### A03 — Unsafe Assertion Fix
 ```typescript
-/** A03 — Unsafe assertion fix */
+/** A03 — Unsafe assertion correction */
 export function parseCount(value: string): number {
   const parsed = Number(value);
   if (Number.isNaN(parsed)) {
@@ -61,7 +61,7 @@ export function parseCount(value: string): number {
 
 ### A04 — False Success Handling
 ```typescript
-/** A04 — False success handling fix */
+/** A04 — False success handling correction */
 export function saveUser(user: unknown): boolean {
   try {
     database.save(user);
@@ -74,7 +74,7 @@ export function saveUser(user: unknown): boolean {
 
 ### A05 — Silent Exception Handling Fix
 ```typescript
-/** A05 — Silent exception handling fix */
+/** A05 — Silent exception handling correction */
 export function loadConfig(configPath: string): Record<string, unknown> {
   try {
     const content = readFile(configPath);
@@ -91,7 +91,7 @@ export function loadConfig(configPath: string): Record<string, unknown> {
 
 ### A06 — Null Dereference Safety
 ```typescript
-/** A06 — Null dereference safety fix */
+/** A06 — Null dereference safety implementation */
 export function getName(user?: { profile?: { name?: string } }): string {
   return user?.profile?.name?.trim() ?? '';
 }
@@ -99,7 +99,7 @@ export function getName(user?: { profile?: { name?: string } }): string {
 
 ### A07 — Default Value Handling
 ```typescript
-/** A07 — Incorrect default handling fix */
+/** A07 — Default value handling correction */
 export function timeout(value?: number): number {
   return value !== undefined ? value : 5000;
 }
@@ -107,7 +107,7 @@ export function timeout(value?: number): number {
 
 ### A08 — Non-Null Assertion Safety
 ```typescript
-/** A08 — Non-null assertion safety fix */
+/** A08 — Non-null assertion safety implementation */
 export function formatName(name: string | undefined): string {
   return name ? name.trim().toUpperCase() : '';
 }
@@ -115,7 +115,7 @@ export function formatName(name: string | undefined): string {
 
 ### A09 — Iteration Mutation Safety
 ```typescript
-/** A09 — Mutation during iteration fix */
+/** A09 — Mutation during iteration correction */
 export function removeInactive(users: { active: boolean }[]): void {
   for (let i = users.length - 1; i >= 0; i--) {
     if (!users[i].active) {
@@ -127,7 +127,7 @@ export function removeInactive(users: { active: boolean }[]): void {
 
 ### A10 — Repeated Lookup Optimization
 ```typescript
-/** A10 — Repeated lookup performance optimization */
+/** A10 — Repeated lookup indexing optimization */
 export function attachNames(ids: number[], users: { id: number; name: string }[]): string[] {
   const userMap = new Map<number, string>();
   for (const user of users) {
@@ -139,7 +139,7 @@ export function attachNames(ids: number[], users: { id: number; name: string }[]
 
 ### A11 — Regular Expression Safety
 ```typescript
-/** A11 — Catastrophic regex fix */
+/** A11 — Regular expression safety validation */
 export function isValid(value: string): boolean {
   return /^a+$/.test(value);
 }
@@ -147,7 +147,7 @@ export function isValid(value: string): boolean {
 
 ### A12 — Dynamic Execution Safety
 ```typescript
-/** A12 — Dynamic execution safety fix */
+/** A12 — Dynamic execution safety validation */
 export function calculate(expression: string): unknown {
   if (!/^[0-9+\-*/().\s]+$/.test(expression)) {
     throw new Error('Invalid expression format');
@@ -158,7 +158,7 @@ export function calculate(expression: string): unknown {
 
 ### A13 — Prototype Pollution Protection
 ```typescript
-/** A13 — Prototype pollution fix */
+/** A13 — Prototype pollution protection */
 export function merge(target: Record<string, unknown>, input: Record<string, unknown>): Record<string, unknown> {
   for (const key of Object.keys(input)) {
     if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
@@ -185,7 +185,7 @@ export function merge(target: Record<string, unknown>, input: Record<string, unk
 
 ### A14 — Command Injection Prevention
 ```typescript
-/** A14 — Command injection fix */
+/** A14 — Command injection prevention */
 export function ping(host: string, callback: (err: Error | null, stdout: string) => void): void {
   if (!/^[a-zA-Z0-9.\-_]+$/.test(host)) {
     callback(new Error('Invalid host format'), '');
@@ -199,7 +199,7 @@ export function ping(host: string, callback: (err: Error | null, stdout: string)
 
 ### A15 — Path Traversal Mitigation
 ```typescript
-/** A15 — Path traversal fix */
+/** A15 — Path traversal mitigation */
 export function readUserFile(root: string, requested: string): string {
   const safeRoot = path.resolve(root);
   const targetPath = path.resolve(safeRoot, requested);
@@ -212,7 +212,7 @@ export function readUserFile(root: string, requested: string): string {
 
 ### A16 — Cryptographic Token Generation
 ```typescript
-/** A16 — Weak token fix */
+/** A16 — Cryptographic token generation */
 export function makeToken(): string {
   return crypto.randomBytes(16).toString('hex');
 }
@@ -220,7 +220,7 @@ export function makeToken(): string {
 
 ### A17 — Timing-Attack Resistant Comparison
 ```typescript
-/** A17 — Secret comparison timing-attack mitigation */
+/** A17 — Timing-attack resistant comparison */
 export function checkSecret(actual: string, expected: string): boolean {
   const actualBuffer = Buffer.from(actual);
   const expectedBuffer = Buffer.from(expected);
@@ -233,13 +233,13 @@ export function checkSecret(actual: string, expected: string): boolean {
 
 ### A18 — Environment Secret Handling
 ```typescript
-/** A18 — Synthetic secret sanitization */
+/** A18 — Environment secret retrieval */
 export const API_KEY = process.env.API_KEY ?? '';
 ```
 
 ### A19 — Resource Management
 ```typescript
-/** A19 — Resource leak fix */
+/** A19 — Resource management and cleanup */
 export function read(filePath: string): string {
   const fd = fs.openSync(filePath, 'r');
   try {
@@ -255,7 +255,7 @@ export function read(filePath: string): string {
 
 ### A20 — Asynchronous Mapping
 ```typescript
-/** A20 — Async forEach bug fix */
+/** A20 — Asynchronous mapping implementation */
 export async function loadAll(ids: string[]): Promise<unknown[]> {
   const promises = ids.map(async id => {
     const res = await fetch(`/api/users/${id}`);
@@ -267,7 +267,7 @@ export async function loadAll(ids: string[]): Promise<unknown[]> {
 
 ### A21 — Promise Rejection Handler
 ```typescript
-/** A21 — Promise rejection loss fix */
+/** A21 — Promise rejection handler implementation */
 export function start(): void {
   doImportantAsyncWork().catch(error => {
     console.error('Unhandled rejection:', error);
@@ -277,7 +277,7 @@ export function start(): void {
 
 ### A22 — Cache Race Condition Fix
 ```typescript
-/** A22 — Cache race condition fix */
+/** A22 — Cache race condition mitigation */
 const cacheMap = new Map<string, Promise<string>>();
 export async function getValue(key: string): Promise<string> {
   let promise = cacheMap.get(key);
@@ -294,7 +294,7 @@ export async function getValue(key: string): Promise<string> {
 
 ### A23 — Retry Operation with Preservation
 ```typescript
-/** A23 — Retry error preservation */
+/** A23 — Retry operation with error preservation */
 export async function retry<T>(op: () => Promise<T>, attempts: number): Promise<T> {
   let lastError: unknown;
   for (let i = 0; i < attempts; i++) {
@@ -313,7 +313,7 @@ export async function retry<T>(op: () => Promise<T>, attempts: number): Promise<
 
 ### A24 — Exponential Backoff Retry
 ```typescript
-/** A24 — Infinite retry backoff fix */
+/** A24 — Exponential backoff retry implementation */
 export async function retryForever<T>(op: () => Promise<T>, maxAttempts = 10): Promise<T> {
   let attempts = 0;
   let delayMs = 100;
@@ -335,7 +335,7 @@ export async function retryForever<T>(op: () => Promise<T>, maxAttempts = 10): P
 
 ### A25 — Bounded Memory History
 ```typescript
-/** A25 — Unbounded history memory leak fix */
+/** A25 — Bounded memory history implementation */
 const history: string[] = [];
 const MAX_HISTORY_SIZE = 1000;
 export function record(event: string): void {
@@ -348,7 +348,7 @@ export function record(event: string): void {
 
 ### A26 — Listener Lifecycle Management
 ```typescript
-/** A26 — Listener lifecycle */
+/** A26 — Listener lifecycle management */
 export class ListenerManager {
   private listeners: (() => void)[] = [];
 
