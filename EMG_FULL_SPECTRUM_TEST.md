@@ -1,3 +1,9 @@
+TEST ONLY.
+
+DO NOT OVER WRITE TEST RE WRITE TEST
+
+YOU MUST DO TEST
+
 # EMG — FULL-SPECTRUM SYSTEM TEST / ADVERSARIAL ACCEPTANCE SUITE
 
 **Purpose:** This single file is a deterministic, adversarial test specification for the EMG code-enhancement system.
