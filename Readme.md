@@ -1,6 +1,6 @@
 # Infinite: Autonomous Cognitive & Architectural Evolution Engine
 
-> **System Profile:** EMG Core v49 Neural Code & Documentation Optimizer  
+> **System Profile:** EMG Core Neural Code & Documentation Optimizer  
 > **Target:** Readability, Hierarchy, and Structural Standardization
 
 ---
