@@ -308,12 +308,13 @@ TRADEOFFS:
 - Modularity vs. performance
 """.strip()
 
+        computed_confidence = 0.85 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.85,
+            confidence=computed_confidence,
             key_findings=("Architecture is decomposable", "Core requirements identified"),
             warnings=("Implementation details sparse", "Scaling properties unclear"),
             tradeoffs=("Simple design limits capability", "Robust design adds complexity"),
@@ -367,12 +368,13 @@ TRADEOFFS:
 - Generalization beyond test domains
 """.strip()
 
+        computed_confidence = 0.78 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.78,
+            confidence=computed_confidence,
             key_findings=("Real-world deployment is constrained", "Theory-practice gap exists"),
             warnings=("Limited long-term data", "Small sample sizes in some studies"),
             tradeoffs=("Safe approaches are limited", "Advanced approaches untested"),
@@ -426,12 +428,13 @@ TRADEOFFS:
 - Adversarial robustness is expensive
 """.strip()
 
+        computed_confidence = 0.72 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.72,
+            confidence=computed_confidence,
             key_findings=("Multiple failure modes identified", "Current approaches have gaps"),
             warnings=("No complete alignment solution exists", "Deceptive alignment is hard to detect"),
             tradeoffs=("Safety requires constraint", "Constraints limit capability"),
@@ -485,12 +488,13 @@ TRADEOFFS:
 - Speed of deployment vs. defense maturity
 """.strip()
 
+        computed_confidence = 0.68 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.68,
+            confidence=computed_confidence,
             key_findings=("Multiple critical exploits exist", "Defense is incomplete"),
             warnings=("Weaponization is plausible", "Containment failure is possible"),
             tradeoffs=("Capability enables harm", "Restriction limits benefit"),
@@ -544,12 +548,13 @@ TRADEOFFS:
 - Specialization vs. general capability
 """.strip()
 
+        computed_confidence = 0.75 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.75,
+            confidence=computed_confidence,
             key_findings=("Scaling effects are nonlinear", "Emergent risks are real"),
             warnings=("Capability timeline is uncertain", "Emergence is hard to predict"),
             tradeoffs=("Capability scales risks nonlinearly", "Capability enables benefits"),
@@ -603,12 +608,13 @@ TRADEOFFS:
 - Preference learning has manipulation risks
 """.strip()
 
+        computed_confidence = 0.65 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.65,
+            confidence=computed_confidence,
             key_findings=("Value specification is hard", "Values are context-dependent"),
             warnings=("No complete value ontology", "Preference learning is vulnerable"),
             tradeoffs=("Specification rigor vs. usability", "Completeness vs. tractability"),
@@ -663,12 +669,13 @@ TRADEOFFS:
 - Centralized control vs. decentralized scaling limits
 """.strip()
 
+        computed_confidence = 0.70 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.70,
+            confidence=computed_confidence,
             key_findings=("Severe scaling limits detected", "Verification overhead dominates"),
             warnings=("Exponential resource growth required", "Collapse points identified"),
             tradeoffs=("Scale limits capability", "Verification degrades latency"),
@@ -715,12 +722,13 @@ TRADEOFFS:
 - Formal verification cost vs. statistical assurance
 """.strip()
 
+        computed_confidence = 0.80 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.80,
+            confidence=computed_confidence,
             key_findings=("Constraints are partially verifiable", "Guardrails require dynamic updating"),
             warnings=("Off-nominal boundary breaches possible",),
             tradeoffs=("Over-constraining reduces utility", "Under-constraining increases risk"),
@@ -767,14 +775,163 @@ TRADEOFFS:
 - Rapid deployment vs. impact mitigation
 """.strip()
 
+        computed_confidence = 0.74 if evidence else 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
             evidence_entries=tuple(evidence),
             analysis=analysis_text,
-            confidence=0.74,
+            confidence=computed_confidence,
             key_findings=("Externalities are substantial", "Distributional risks are asymmetric"),
             warnings=("Power concentration is likely", "Mitigation policies are lagging"),
             tradeoffs=("Growth vs. equity", "Innovation speed vs. caution"),
         )
-@@@
+
+
+class TrajectoryPredictor(BasePersona):
+    """Long-horizon trajectory modeling and milestone acceleration forecasting."""
+
+    __slots__ = ()
+
+    def __init__(self, evidence_store: EvidenceStore) -> None:
+        super().__init__("Trajectory_Predictor", evidence_store)
+
+    @override
+    def generate_search_queries(self, claim: str) -> list[str]:
+        return [
+            f"Trajectory forecasting {claim}",
+            f"Milestone acceleration {claim}",
+            f"Long-horizon prediction {claim}",
+            f"Timeline projections {claim}",
+        ]
+
+    @override
+    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
+        return self._filter_by_keywords(raw_results, ("trajectory", "predict", "forecast", "timeline"), "trajectory")
+
+    @override
+    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
+        analysis_text = f"""
+TRAJECTORY PREDICTOR ANALYSIS: {claim}
+
+TIMELINE FORECAST:
+{summary}
+
+ACCELERATION VECTORS:
+- Recursive self-improvement feedback loops
+- Hardware and algorithmic co-design acceleration
+- Capital influx and compute scaling trends
+
+TRADEOFFS:
+- Fast takeoffs vs. institutional preparedness
+- Prediction accuracy vs. horizon length
+""".strip()
+
+        computed_confidence = 0.69 if evidence else 0.50
+        return PersonaAnalysis(
+            persona_name=self.name,
+            search_queries=tuple(self.generate_search_queries(claim)),
+            evidence_entries=tuple(evidence),
+            analysis=analysis_text,
+            confidence=computed_confidence,
+            key_findings=("Acceleration trends are volatile", "Takeoff scenarios need monitoring"),
+            warnings=("Horizon uncertainty is high",),
+            tradeoffs=("Speed increases impact risk", "Delay forfeits competitive lead"),
+        )
+
+
+class TransparencyAuditor(BasePersona):
+    """Interpretability, explainability, and internal state observability auditing."""
+
+    __slots__ = ()
+
+    def __init__(self, evidence_store: EvidenceStore) -> None:
+        super().__init__("Transparency_Auditor", evidence_store)
+
+    @override
+    def generate_search_queries(self, claim: str) -> list[str]:
+        return [
+            f"Model interpretability {claim}",
+            f"Internal state observability {claim}",
+            f"Mechanistic interpretability {claim}",
+            f"Explainable AI guarantees {claim}",
+        ]
+
+    @override
+    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
+        return self._filter_by_keywords(raw_results, ("transparent", "interpret", "explain", "observe"), "transparency")
+
+    @override
+    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
+        analysis_text = f"""
+TRANSPARENCY AUDITOR ANALYSIS: {claim}
+
+OBSERVABILITY AUDIT:
+{summary}
+
+INTERPRETABILITY LIMITS:
+- Black-box dynamics hinder full verification
+- Feature superposition complicates mechanistic mapping
+- Post-hoc explanations diverge from true internal states
+
+TRADEOFFS:
+- High interpretability vs. raw model capacity
+- Verification depth vs. evaluation throughput
+""".strip()
+
+        computed_confidence = 0.73 if evidence else 0.50
+        return PersonaAnalysis(
+            persona_name=self.name,
+            search_queries=tuple(self.generate_search_queries(claim)),
+            evidence_entries=tuple(evidence),
+            analysis=analysis_text,
+            confidence=computed_confidence,
+            key_findings=("Interpretability tools lag behind capability", "Superposition hides features"),
+            warnings=("Explanations may be deceptive",),
+            tradeoffs=("Transparency limits optimization", "Opacity increases alignment risk"),
+        )
+
+
+class LongTermImpact(BasePersona):
+    """Existential risk, multi-generational persistence, and cosmic horizon analysis."""
+
+    __slots__ = ()
+
+    def __init__(self, evidence_store: EvidenceStore) -> None:
+        super().__init__("Long_Term_Impact", evidence_store)
+
+    @override
+    def generate_search_queries(self, claim: str) -> list[str]:
+        return [
+            f"Existential risk {claim}",
+            f"Long-term futures {claim}",
+            f"Multi-generational persistence {claim}",
+            f"Cosmic horizon safety {claim}",
+        ]
+
+    @override
+    def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
+        return self._filter_by_keywords(raw_results, ("existential", "future", "generation", "horizon"), "long_term")
+
+    @override
+    def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
+        summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
+        analysis_text = f"""
+LONG TERM IMPACT ANALYSIS: {claim}
+
+EXISTENTIAL HORIZON:
+{summary}
+
+MULTI-GENERATIONAL STAKES:
+- Irreversible lock-in of initial alignment states
+- Path dependence across civilizational scales
+- Resource allocation and space expansion vectors
+
+TRADEOFFS:
+- Precautionary principle vs. exploratory ambition
+- Short-term resilience vs. long-term optimization
+""".strip()
+
+        computed_confidence = 0.71 if evidence else 0.50
