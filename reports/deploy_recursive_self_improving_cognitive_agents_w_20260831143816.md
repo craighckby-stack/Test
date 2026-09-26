@@ -1,6 +1,3 @@
-@@@SUMMARY
-Comprehensive documentation overhaul polishing prose, standardizing headings, annotating diagrams, and maintaining strict adherence to ungrounded metric constraints.
-@@@
 # Deployment & Safety Evaluation: Recursive Self-Improving Cognitive Agents
 
 **Document ID:** `REP-20260831143816-RSI-AGENTS`  
