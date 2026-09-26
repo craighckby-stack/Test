@@ -911,4 +911,5 @@ TRADEOFFS:
             key_findings=("Lock-in risk is irreversible on long horizons", "Path dependence compounds early choices"),
             warnings=("Existential stakes are hard to weight against near-term costs",),
             tradeoffs=("Caution now vs. forfeited long-run option value", "Centralized safety vs. distributed resilience"),
-    )
+        )
+@@@
