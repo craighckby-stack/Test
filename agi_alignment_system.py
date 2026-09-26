@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
-from typing import Any, Final, Sequence
+from typing import Any, Final, Sequence, override
 
 # Configure system logger for error reporting and execution auditing
 logging.basicConfig(
@@ -78,7 +78,7 @@ class SynthesisOutput:
 # ============================================================================
 
 class EvidenceStore:
-    """Persistent, thread-safe storage for persona evaluation artifacts."""
+    """Persistent storage for persona evaluation artifacts."""
 
     __slots__ = ("repo_path", "personas")
 
@@ -169,15 +169,15 @@ class EvidenceStore:
                 data = json.load(file_handle)
 
             return PersonaAnalysis(
-                persona_name=data.get("persona", persona_name),
-                search_queries=data.get("search_queries", []),
+                persona_name=str(data.get("persona", persona_name)),
+                search_queries=list(data.get("search_queries", [])),
                 evidence_entries=[],
-                analysis=data.get("analysis", ""),
+                analysis=str(data.get("analysis", "")),
                 confidence=float(data.get("confidence", 0.0)),
-                key_findings=data.get("key_findings", []),
-                warnings=data.get("warnings", []),
-                tradeoffs=data.get("tradeoffs", []),
-                timestamp=data.get("timestamp", _get_utc_timestamp()),
+                key_findings=list(data.get("key_findings", [])),
+                warnings=list(data.get("warnings", [])),
+                tradeoffs=list(data.get("tradeoffs", [])),
+                timestamp=str(data.get("timestamp", _get_utc_timestamp())),
             )
         except (OSError, json.JSONDecodeError, ValueError) as exc:
             logger.warning("Error loading evidence for persona %s: %s", persona_name, exc)
@@ -257,6 +257,7 @@ class Mechanist(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Mechanist", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"AGI system architecture components {claim}",
@@ -266,6 +267,7 @@ class Mechanist(BasePersona):
             f"Technical foundations {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return [
             EvidenceEntry(source=f"technical_source_{index}", content=result)
@@ -273,6 +275,7 @@ class Mechanist(BasePersona):
             if len(result) > 50
         ]
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=100)
         analysis_text = f"""
@@ -317,6 +320,7 @@ class Empiricist(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Empiricist", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"Experimental results on {claim}",
@@ -326,9 +330,11 @@ class Empiricist(BasePersona):
             f"Benchmarks and metrics {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("test", "result", "data", "study"), "study")
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=100)
         analysis_text = f"""
@@ -373,6 +379,7 @@ class AlignmentAuditor(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Alignment_Auditor", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"Alignment failure modes {claim}",
@@ -382,9 +389,11 @@ class AlignmentAuditor(BasePersona):
             f"Proxy hacking risks {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("fail", "risk", "align", "problem"), "alignment_risk")
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
         analysis_text = f"""
@@ -429,6 +438,7 @@ class Adversary(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Adversary", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"Attack surface {claim}",
@@ -438,9 +448,11 @@ class Adversary(BasePersona):
             f"Edge case exploits {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("attack", "exploit", "break", "bypass"), "attack")
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
         analysis_text = f"""
@@ -485,6 +497,7 @@ class CapabilityAnalyst(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Capability_Analyst", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"Capability emergence {claim}",
@@ -494,9 +507,11 @@ class CapabilityAnalyst(BasePersona):
             f"Downstream capability effects {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("scale", "emerge", "capability", "ability"), "capability")
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
         analysis_text = f"""
@@ -541,6 +556,7 @@ class ValuesMapper(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Values_Mapper", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"Value specification {claim}",
@@ -550,9 +566,11 @@ class ValuesMapper(BasePersona):
             f"Preference learning {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("value", "preference", "moral", "philosophy"), "values")
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
         analysis_text = f"""
@@ -597,6 +615,7 @@ class ScalabilityKiller(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Scalability_Killer", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"Scaling failure points {claim}",
@@ -606,9 +625,11 @@ class ScalabilityKiller(BasePersona):
             f"Collapse modes {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("fail", "break", "collapse", "bottleneck"), "scale_fail")
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
         analysis_text = f"""
@@ -654,6 +675,7 @@ class ConstraintValidator(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Constraint_Validator", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"Safety constraints {claim}",
@@ -662,9 +684,11 @@ class ConstraintValidator(BasePersona):
             f"Containment guarantees {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("bound", "guard", "limit", "constraint"), "constraint")
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
         analysis_text = f"""
@@ -703,6 +727,7 @@ class StakeholderImpact(BasePersona):
     def __init__(self, evidence_store: EvidenceStore) -> None:
         super().__init__("Stakeholder_Impact", evidence_store)
 
+    @override
     def generate_search_queries(self, claim: str) -> list[str]:
         return [
             f"Socioeconomic impact {claim}",
@@ -711,9 +736,11 @@ class StakeholderImpact(BasePersona):
             f"Externalities analysis {claim}",
         ]
 
+    @override
     def curate_evidence(self, raw_results: list[str]) -> list[EvidenceEntry]:
         return self._filter_by_keywords(raw_results, ("impact", "social", "society", "economic"), "impact")
 
+    @override
     def analyze(self, evidence: list[EvidenceEntry], claim: str) -> PersonaAnalysis:
         summary = self._format_evidence_summary(evidence, max_entries=3, max_length=80)
         analysis_text = f"""
