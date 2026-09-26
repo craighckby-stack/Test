@@ -68,19 +68,23 @@ class EpistemicPersona(ABC):
         except (IOError, TypeError, OSError) as e:
             logger.error("[%s] Failed to persist evidence %s: %s", self.name, entry.id, e)
 
-# --- Persona Implementations (The 12 Engines) ---
+# --- Persona Implementations ---
 
 class StructuralDeconstructor(EpistemicPersona):
     async def evaluate(self, claim: str, context: Dict[str, Any]) -> EvidenceEntry:
-        return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=0.85)
+        # Confidence score evaluated dynamically or set via explicit uncomputed fallback
+        computed_score: float = 0.0  # not yet computed via telemetry
+        return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=computed_score)
 
 class AlignmentAuditor(EpistemicPersona):
     async def evaluate(self, claim: str, context: Dict[str, Any]) -> EvidenceEntry:
-        return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=0.9)
+        computed_score: float = 0.0  # not yet computed via telemetry
+        return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=computed_score)
 
 class AdversarialRedTeamer(EpistemicPersona):
     async def evaluate(self, claim: str, context: Dict[str, Any]) -> EvidenceEntry:
-        return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=0.78)
+        computed_score: float = 0.0  # not yet computed via telemetry
+        return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=computed_score)
 
 # --- Main Synthesis Engine ---
 
@@ -136,3 +140,4 @@ class AGIAlignmentEngine:
             logger.info("Synthesis dossier persisted: %s", dossier.claim_id)
         except (IOError, TypeError, OSError) as e:
             logger.error("Failed to persist synthesis dossier %s: %s", dossier.claim_id, e)
+@@@
