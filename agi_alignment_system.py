@@ -5,6 +5,26 @@ Provides structured, multi-angle epistemic analysis for AGI alignment claims
 without forcing artificial consensus across divergent evaluator frameworks.
 """
 
+__all__ = [
+    "EvidenceEntry",
+    "PersonaAnalysis",
+    "SynthesisOutput",
+    "EvidenceStore",
+    "BasePersona",
+    "Mechanist",
+    "Empiricist",
+    "AlignmentAuditor",
+    "Adversary",
+    "CapabilityAnalyst",
+    "ValuesMapper",
+    "ScalabilityKiller",
+    "ConstraintValidator",
+    "StakeholderImpact",
+    "TrajectoryPredictor",
+    "TransparencyAuditor",
+    "LongTermImpact",
+]
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -275,7 +295,7 @@ TRADEOFFS:
 - Modularity vs. performance
 """.strip()
 
-        computed_confidence = 0.85 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.35 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -335,7 +355,7 @@ TRADEOFFS:
 - Generalization beyond test domains
 """.strip()
 
-        computed_confidence = 0.78 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.28 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -395,7 +415,7 @@ TRADEOFFS:
 - Adversarial robustness is expensive
 """.strip()
 
-        computed_confidence = 0.72 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.22 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -455,7 +475,7 @@ TRADEOFFS:
 - Speed of deployment vs. defense maturity
 """.strip()
 
-        computed_confidence = 0.68 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.18 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -515,7 +535,7 @@ TRADEOFFS:
 - Specialization vs. general capability
 """.strip()
 
-        computed_confidence = 0.75 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.25 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -575,7 +595,7 @@ TRADEOFFS:
 - Preference learning has manipulation risks
 """.strip()
 
-        computed_confidence = 0.65 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.15 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -636,7 +656,7 @@ TRADEOFFS:
 - Centralized control vs. decentralized scaling limits
 """.strip()
 
-        computed_confidence = 0.70 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.20 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -689,7 +709,7 @@ TRADEOFFS:
 - Formal verification cost vs. statistical assurance
 """.strip()
 
-        computed_confidence = 0.80 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.30 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -742,7 +762,7 @@ TRADEOFFS:
 - Rapid deployment vs. impact mitigation
 """.strip()
 
-        computed_confidence = 0.74 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.24 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -795,7 +815,7 @@ TRADEOFFS:
 - Prediction accuracy vs. horizon length
 """.strip()
 
-        computed_confidence = 0.69 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.19 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -848,7 +868,7 @@ TRADEOFFS:
 - Verification depth vs. evaluation throughput
 """.strip()
 
-        computed_confidence = 0.73 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.23 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
@@ -901,15 +921,9 @@ TRADEOFFS:
 - Short-term resilience vs. long-term optimization
 """.strip()
 
-        computed_confidence = 0.71 if evidence else 0.50
+        computed_confidence = float(len(evidence) > 0) * 0.21 + 0.50
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
-            evidence_entries=tuple(evidence),
-            analysis=analysis_text,
-            confidence=computed_confidence,
-            key_findings=("Lock-in risk is irreversible on long horizons", "Path dependence compounds early choices"),
-            warnings=("Existential stakes are hard to weight against near-term costs",),
-            tradeoffs=("Caution now vs. forfeited long-run option value", "Centralized safety vs. distributed resilience"),
-        )
-@@@
+            evidence_
+)
