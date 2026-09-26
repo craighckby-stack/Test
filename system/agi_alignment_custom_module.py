@@ -67,6 +67,7 @@ class EpistemicPersona(ABC):
             logger.info("[%s] Evidence persisted: %s", self.name, entry.id)
         except (IOError, TypeError, OSError) as e:
             logger.error("[%s] Failed to persist evidence %s: %s", self.name, entry.id, e)
+            raise
 
 # --- Persona Implementations ---
 
@@ -139,3 +140,5 @@ class AGIAlignmentEngine:
             logger.info("Synthesis dossier persisted: %s", dossier.claim_id)
         except (IOError, TypeError, OSError) as e:
             logger.error("Failed to persist synthesis dossier %s: %s", dossier.claim_id, e)
+            raise
+@@@
