@@ -935,3 +935,6 @@ TRADEOFFS:
 """.strip()
 
         computed_confidence = 0.71 if evidence else 0.50
+        return PersonaAnalysis(
+            persona_name=
+)
