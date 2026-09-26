@@ -925,5 +925,5 @@ TRADEOFFS:
         return PersonaAnalysis(
             persona_name=self.name,
             search_queries=tuple(self.generate_search_queries(claim)),
-            evidence_
+            evidence_entries
 )
