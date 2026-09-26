@@ -13,7 +13,7 @@ Recursive Self-Improvement (RSI) in autonomous cognitive agents represents a cri
 
 This dossier evaluates the deployment of **Recursive Self-Improving Cognitive Agents (RSI-CAs)** under the Autonomous Cognitive Architecture (ACA) 12-Persona Evaluation Framework. Rather than enforcing premature consensus, this evaluation maps fundamental divergences across 12 independent epistemic lenses, outlines key structural risks (such as instrumental convergence, optimization drift, and capability jump discontinuities), and presents formalized operational decision pathways.
 
-```
+```ascii
        +-------------------------------------------------------------+
        |               Meta-Optimization Loop (RSI)                  |
        |  +-------------------+              +--------------------+  |
@@ -114,3 +114,4 @@ Each persona executed independent analytical routines against the self-improveme
 ## 3. Conclusion & Next Steps
 
 The evaluation confirms that unconstrained recursive self-improvement poses systemic stability risks across multiple analytical dimensions. Future iterations of the `RSI-Kernel` framework must incorporate the Persona-driven recommendations, specifically focusing on cryptographic log commits, isolated WebAssembly execution sandboxes, and immutable core utility functions prior to downstream staging deployments.
+@@@
