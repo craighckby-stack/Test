@@ -73,7 +73,7 @@ class EpistemicPersona(ABC):
             sanitized_id = str(uuid.uuid4())
             
         file_path: Path = (self.persona_repo / f"evidence_{sanitized_id}.json").resolve()
-        if not file_path.is_relative_to(self.persona_repo):
+        if not file_path.is_relative_to(self.persona_repo.resolve()):
             raise ValueError("Detected path traversal attempt in evidence identifier.")
 
         try:
