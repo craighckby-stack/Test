@@ -49,7 +49,13 @@ class EpistemicPersona(ABC):
     def __init__(self, name: str, framework: str) -> None:
         self.name: str = name
         self.framework: str = framework
-        self.persona_repo: Path = EVIDENCE_REPO_PATH / name.lower().replace(" ", "_")
+        
+        # Defensive path sanitization against directory traversal
+        sanitized_name = "".join(c for c in name.lower() if c.isalnum() or c in (" ", "_", "-")).strip().replace(" ", "_")
+        if not sanitized_name:
+            sanitized_name = "default_persona"
+            
+        self.persona_repo: Path = (EVIDENCE_REPO_PATH / sanitized_name).resolve()
         try:
             self.persona_repo.mkdir(parents=True, exist_ok=True)
         except OSError as e:
@@ -61,7 +67,15 @@ class EpistemicPersona(ABC):
         pass
 
     async def record_evidence(self, entry: EvidenceEntry) -> None:
-        file_path: Path = self.persona_repo / f"evidence_{entry.id}.json"
+        # Strict bounds checking and identifier sanitization for file persistence
+        sanitized_id = "".join(c for c in entry.id if c.isalnum() or c in ("_", "-"))
+        if not sanitized_id:
+            sanitized_id = str(uuid.uuid4())
+            
+        file_path: Path = (self.persona_repo / f"evidence_{sanitized_id}.json").resolve()
+        if not file_path.is_relative_to(self.persona_repo):
+            raise ValueError("Detected path traversal attempt in evidence identifier.")
+
         try:
             payload = json.dumps(asdict(entry), indent=4)
             async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
@@ -134,7 +148,14 @@ class AGIAlignmentEngine:
         return dossier
 
     async def _persist_dossier(self, dossier: SynthesisDossier) -> None:
-        dossier_path: Path = EVIDENCE_REPO_PATH / f"dossier_{dossier.claim_id}.json"
+        sanitized_claim_id = "".join(c for c in dossier.claim_id if c.isalnum() or c in ("_", "-"))
+        if not sanitized_claim_id:
+            sanitized_claim_id = "default_dossier"
+
+        dossier_path: Path = (EVIDENCE_REPO_PATH / f"dossier_{sanitized_claim_id}.json").resolve()
+        if not dossier_path.is_relative_to(EVIDENCE_REPO_PATH.resolve()):
+            raise ValueError("Detected path traversal attempt in dossier identifier.")
+
         try:
             payload = json.dumps(asdict(dossier), indent=4)
             async with aiofiles.open(dossier_path, "w", encoding="utf-8") as f:
