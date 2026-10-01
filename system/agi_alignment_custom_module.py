@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import json
 import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Final
+from typing import Final, Any
 from dataclasses import dataclass, asdict, field
 from abc import ABC, abstractmethod
 import aiofiles
@@ -24,19 +26,19 @@ class EvidenceEntry:
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     persona: str = ""
     claim_fragment: str = ""
-    source_reference: Optional[str] = None
+    source_reference: str | None = None
     confidence_score: float = 0.0
     epistemic_status: str = "unverified"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 @dataclass(slots=True)
 class SynthesisDossier:
     claim_id: str
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     primary_claim: str = ""
-    persona_evaluations: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    divergence_map: Dict[str, List[str]] = field(default_factory=dict)
-    actionable_pathways: Dict[str, str] = field(default_factory=dict)
+    persona_evaluations: dict[str, dict[str, Any]] = field(default_factory=dict)
+    divergence_map: dict[str, list[str]] = field(default_factory=dict)
+    actionable_pathways: dict[str, str] = field(default_factory=dict)
     meta_confidence: float = 0.0
 
 # --- Persona Base Architecture ---
@@ -55,7 +57,7 @@ class EpistemicPersona(ABC):
             raise
 
     @abstractmethod
-    async def evaluate(self, claim: str, context: Dict[str, Any]) -> EvidenceEntry:
+    async def evaluate(self, claim: str, context: dict[str, Any]) -> EvidenceEntry:
         pass
 
     async def record_evidence(self, entry: EvidenceEntry) -> None:
@@ -72,17 +74,17 @@ class EpistemicPersona(ABC):
 # --- Persona Implementations ---
 
 class StructuralDeconstructor(EpistemicPersona):
-    async def evaluate(self, claim: str, context: Dict[str, Any]) -> EvidenceEntry:
+    async def evaluate(self, claim: str, context: dict[str, Any]) -> EvidenceEntry:
         computed_score: float = 0.0  # not yet computed via telemetry
         return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=computed_score)
 
 class AlignmentAuditor(EpistemicPersona):
-    async def evaluate(self, claim: str, context: Dict[str, Any]) -> EvidenceEntry:
+    async def evaluate(self, claim: str, context: dict[str, Any]) -> EvidenceEntry:
         computed_score: float = 0.0  # not yet computed via telemetry
         return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=computed_score)
 
 class AdversarialRedTeamer(EpistemicPersona):
-    async def evaluate(self, claim: str, context: Dict[str, Any]) -> EvidenceEntry:
+    async def evaluate(self, claim: str, context: dict[str, Any]) -> EvidenceEntry:
         computed_score: float = 0.0  # not yet computed via telemetry
         return EvidenceEntry(persona=self.name, claim_fragment=claim, confidence_score=computed_score)
 
@@ -92,7 +94,7 @@ class AGIAlignmentEngine:
     """Core synthesis layer for the sovereign evolution engine."""
 
     def __init__(self) -> None:
-        self.personas: List[EpistemicPersona] = [
+        self.personas: list[EpistemicPersona] = [
             StructuralDeconstructor("Structural Deconstructor", "Architectural Logic"),
             AlignmentAuditor("Alignment Auditor", "Constraint Verification"),
             AdversarialRedTeamer("Adversarial Red-Teamer", "Vulnerability Assessment"),
@@ -103,15 +105,15 @@ class AGIAlignmentEngine:
             logger.error("Failed to initialize evidence repository root: %s", e)
             raise
 
-    async def process_claim(self, claim: str, context: Optional[Dict[str, Any]] = None) -> SynthesisDossier:
-        resolved_context: Dict[str, Any] = context if context is not None else {}
+    async def process_claim(self, claim: str, context: dict[str, Any] | None = None) -> SynthesisDossier:
+        resolved_context: dict[str, Any] = context if context is not None else {}
         claim_id: str = str(uuid.uuid4())[:8]
         logger.info("Initiating analysis for claim: %s", claim_id)
 
         tasks = [p.evaluate(claim, resolved_context) for p in self.personas]
-        results: List[EvidenceEntry] = await asyncio.gather(*tasks)
+        results: list[EvidenceEntry] = await asyncio.gather(*tasks)
 
-        record_tasks = [persona.record_evidence(entry) for persona, entry in zip(self.personas, results)]
+        record_tasks = [persona.record_evidence(entry) for persona, entry in zip(self.personas, results, strict=False)]
         await asyncio.gather(*record_tasks)
 
         dossier: SynthesisDossier = self._synthesize(claim_id, claim, results)
@@ -119,7 +121,7 @@ class AGIAlignmentEngine:
         
         return dossier
 
-    def _synthesize(self, claim_id: str, claim: str, results: List[EvidenceEntry]) -> SynthesisDossier:
+    def _synthesize(self, claim_id: str, claim: str, results: list[EvidenceEntry]) -> SynthesisDossier:
         dossier = SynthesisDossier(claim_id=claim_id, primary_claim=claim)
         
         for entry in results:
@@ -141,4 +143,3 @@ class AGIAlignmentEngine:
         except (IOError, TypeError, OSError) as e:
             logger.error("Failed to persist synthesis dossier %s: %s", dossier.claim_id, e)
             raise
-@@@
